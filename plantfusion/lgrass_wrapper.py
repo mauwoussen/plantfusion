@@ -1,11 +1,48 @@
 import os
 import pandas as pd
+import numpy
+
+import lgrass
+import openalea.lpy as lpy
+
+from plantfusion.utils import create_child_folder
+from plantfusion.indexer import Indexer
 
 
 class Lgrass_wrapper:
-    def __init__(self, name="lgrass", indexer=Indexer(), in_folder="inputs", simulation_name="", out_folder=None):
+    def __init__(self, name="lgrass", 
+                 indexer=Indexer(), 
+                 in_folder="inputs", 
+                 out_folder=None,
+                 plan_sim_file="plan_simulation.csv",
+                 param_plant_file = "Parametre_plante_Lgrass.csv",# un fichier de remplacement du modèle génétique qui génère une population de C et détermine le nombre de plantes du couvert        
+                 id_scenario = 0,
+                 ):
+        if out_folder is not None:
+            try:
+                os.mkdir(os.path.normpath(out_folder))
+                print("Directory ", out_folder, " Created ")
+            except FileExistsError:
+                pass
+
+            # output folder for l-egume
+            out_folder = os.path.normpath(out_folder)
+            self.out_folder = os.path.join(out_folder, name)
+            try:
+                os.mkdir(os.path.normpath(self.out_folder))
+                print("Directory ", self.out_folder, " Created ")
+            except FileExistsError:
+                pass
+            create_child_folder(self.out_folder, "brut")
+            create_child_folder(self.out_folder, "graphs")
+
+        else:
+            self.out_folder = ""
 
         self.name = name
+        self.indexer = indexer
+        self.global_index = indexer.global_order.index(name)
+        self.lgrass_index = indexer.lgrass_names.index(name)
 
         # paramètres plantes
         path_param = os.path.join(in_folder, "Parametre_plante_Lgrass.xls")
@@ -18,7 +55,8 @@ class Lgrass_wrapper:
         self.paramP2 = dict(zip(TableParamP2["name"], TableParamP2["value"]))
 
         # plan de simulation
-
+        self.plan_sim = pd.read_csv(os.path.join(in_folder, plan_sim_file), sep=',')
+        self.row = self.plan_sim.iloc[id_scenario]
         # données carbone
 
         # other data
@@ -26,8 +64,12 @@ class Lgrass_wrapper:
         # init flowering_param
 
         # init lsystem
+        self.lpy_filename = os.path.join(lgrass.__path__[0], 'lgrass.lpy')
+        self.lsystem = lpy.Lsystem(self.lpy_filename)
+        self.lsystem.name_sim = name
+        self.lstring = self.lsystem.axiom
 
-        # trnasmet les options au lsystem
+        # transmet les options au lsystem
 
     def light_inputs(self):
         return self.scene

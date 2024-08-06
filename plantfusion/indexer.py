@@ -25,21 +25,24 @@ class Indexer:
 
     """
 
-    def __init__(self, global_order=[], wheat_names=[], legume_names=[], other_names=[]) -> None:
+    def __init__(self, global_order=[], wheat_names=[], legume_names=[], lgrass_names=[], other_names=[]) -> None:
         """Constructor, initialize simulation lists of FSPM
         """        
         self.global_order: list = global_order
         self.wheat_names: list = wheat_names
         self.legume_names: list = legume_names
+        self.lgrass_names: list = lgrass_names
         self.other_names: list = other_names
 
         self.legume_active: bool = legume_names != []
         self.wheat_active: bool = wheat_names != []
+        self.lgrass_active: bool = lgrass_names != []
 
         self.legume_number_of_species: list = [1] * len(legume_names)
 
         self.wheat_index: list = [global_order.index(name) for name in wheat_names if name in global_order]
         self.legume_index: list = [global_order.index(name) for name in legume_names if name in global_order]
+        self.lgrass_index: list = [global_order.index(name) for name in lgrass_names if name in global_order]
         self.other_index: list = [global_order.index(name) for name in other_names if name in global_order]
 
     def update_legume_several_species(self, name, number_of_species=None):
