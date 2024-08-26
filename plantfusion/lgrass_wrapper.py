@@ -1,4 +1,5 @@
 import os
+import shutil
 import pandas as pd
 import numpy
 
@@ -99,9 +100,12 @@ class Lgrass_wrapper:
         self.lsystem.sowing_date = self.setup["sowing_date"]
         self.lsystem.site = self.setup["site"]
         self.lsystem.meteo = meteo_ephem.import_meteo_data(self.setup["meteo_path"], self.setup['sowing_date'], self.setup['site'])
-        self.lsystem.output_induction_file_name = name + '_' + 'induction'
-        self.lsystem.output_organ_lengths_file_name = name + '_' + 'organ_lengths'
-
+        self.lsystem.OUTPUTS_DIRPATH = os.path.join(out_folder, "data")
+        self.lsystem.GRAPHS_DIRPATH = os.path.join(out_folder, "graphs")
+        self.lsystem.output_induction_file_name = self.simulation_name + '_' + 'induction'
+        self.lsystem.output_organ_lengths_file_name = self.simulation_name + '_' + 'organ_lengths'
+        self.lsystem.option_graphic_outputs = outputs_graphs
+        
         # Gestion des tontes
         if self.setup["option_tontes"]:
             self.lsystem.cutting_dates, self.lsystem.derivationLength = cuts.define_cutting_dates(self.lsystem.meteo,
@@ -146,7 +150,7 @@ class Lgrass_wrapper:
                                                 self.setup["option_reproduction"], 
                                                 self.setup["cutting_freq"], 
                                                 self.lsystem.ParamP)
-            numpy.savetxt(os.path.join(self.out_folder, "data", str(self.setup["name"])  + "_mat.csv"), self.genet_mat)
+            numpy.savetxt(os.path.join(self.out_folder, "data", str(self.simulation_name)  + "_mat.csv"), self.genet_mat)
         else:
             mat = 0
 
@@ -154,15 +158,22 @@ class Lgrass_wrapper:
         if self.setup['option_sauvegarde']:
             gen_lstring.save_lstring(self.lstring, self.lsystem)
 
-        csv_generator = CsvGenerator(self.lstring, self.setup["name"], os.path.join(self.out_folder, "data"))
+        csv_generator = CsvGenerator(self.lstring, self.simulation_name, os.path.join(self.out_folder, "data"))
         csv_generator.metadata_to_csv(self.lsystem)
         csv_generator.leaves_to_csv()
         csv_generator.internodes_to_csv()
         csv_generator.apex_to_csv()
 
+        # move graph picuters created by lsystem in graphs folder
+        if self.lsystem.option_graphic_outputs :
+            for file in os.listdir(os.path.join(self.out_folder, "data")):
+                if file.endswith(".png") or file.endswith(".PNG") or file.endswith(".pdf") :
+                    shutil.move(os.path.join(self.out_folder, "data", file), 
+                                os.path.join(self.out_folder, "graphs", file))
+
         # Vider le lsystem
         self.lsystem.clear()
-        print(''.join((self.setup["name"], " - done")))
+        print(''.join((self.simulation_name, " - done")))
 
     def energy(self):
         return self.lsystem.meteo[self.lsystem.meteo.experimental_day == self.lsystem.current_day].PAR_incident.iloc[0]

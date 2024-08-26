@@ -67,7 +67,8 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
 
         lgrass.end()
 
-        prf.rungenet(lgrass.genet_src, lgrass.genet_dst, lgrass.genet_exe, lgrass.genet_mat, 1)
+        if lgrass.setup["option_reproduction"] != "False":
+            prf.rungenet(lgrass.genet_src, lgrass.genet_dst, lgrass.genet_exe, lgrass.genet_mat, 1)
 
 
     execution_time = int(time.time() - current_time_of_the_system)
@@ -79,5 +80,7 @@ if __name__ == "__main__":
     genetic_model_folder = os.path.join(os.getcwd(), in_folder, "modelgenet")
     out_folder = "outputs/lgrass_default"
     write_geo = False
+    graphs = True
+    scenario_index = 0
 
-    simulation(in_folder, genetic_model_folder, out_folder, write_geo=write_geo)
+    simulation(in_folder, genetic_model_folder, out_folder, scenario_index, write_geo, graphs)
