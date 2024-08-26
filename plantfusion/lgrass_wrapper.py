@@ -57,7 +57,15 @@ class Lgrass_wrapper:
             self.simulation_name =  self.setup["name"] + "_G" + str(generation_index) 
 
             self.genet_src = os.path.join(in_folder, 'insim.txt')
-            self.genet_dst = genetic_model_folder
+            
+            self.genet_dst = genetic_model_folder+"_"+self.simulation_name
+            os.system(f"mkdir -p {self.genet_dst}")
+            for f in os.listdir(genetic_model_folder):
+                if os.name == "posix" :
+                    os.system(f'cp {os.path.join(genetic_model_folder, f)} {os.path.join(self.genet_dst, f)}')
+                else:
+                    os.system(f'copy {os.path.join(genetic_model_folder, f)} {os.path.join(self.genet_dst, f)}')
+                
             if os.name == "posix" :
                 self.genet_exe = 'simpraise'    
             else:

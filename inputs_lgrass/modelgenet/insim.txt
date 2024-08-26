@@ -45,6 +45,6 @@ insim.002
 2,90
 *mating_design 
 0
-35
-29
+34
+30
 0
