@@ -1,0 +1,6 @@
+name,derivationLength,meteo_path,sowing_date,site,num_gener,cutting_freq,cutting_start,option_tontes,option_tallage,option_senescence,option_floraison,option_reproduction,option_caribu,option_tiller_regression,option_morphogenetic_regulation_by_carbone,option_sauvegarde
+example_simpraise,1000,inputs_lgrass/meteo_file.csv,2018_11_13,LUSIGNAN,5,14,,False,True,False,True,spikelets,False,False,False,False
+scenario_test_simpraise1,1800,inputs_lgrass/meteo_file.csv,2018_11_13,LUSIGNAN,4,21,2019_03_15,True,True,False,False,SPPR_2012,False,False,False,False
+simpraise_coupes_frequentes,1800,inputs_lgrass/meteo_file.csv,2018_11_13,LUSIGNAN,4,7,2019_03_15,True,True,False,False,SPPR_2012,False,False,False,False
+simpraise_sans_coupe,1800,inputs_lgrass/meteo_file.csv,2018_11_13,LUSIGNAN,4,0,,False,True,False,False,SPPR_2012,False,False,False,False
+example_lsystem,100,inputs_lgrass/meteo_file.csv,2018_11_13,LUSIGNAN,1,14,2019_01_15,False,True,False,False,,False,False,False,False

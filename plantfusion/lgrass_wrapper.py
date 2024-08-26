@@ -2,8 +2,13 @@ import os
 import pandas as pd
 import numpy
 
-import lgrass
 import openalea.lpy as lpy
+
+from lgrass import param_reproduction_functions as prf
+from lgrass import meteo_ephem as meteo_ephem
+from lgrass import cuts as cuts
+from lgrass import gen_lstring as gen_lstring
+from lgrass.output_data import CsvGenerator
 
 from plantfusion.utils import create_child_folder
 from plantfusion.indexer import Indexer
@@ -14,26 +19,23 @@ class Lgrass_wrapper:
                  indexer=Indexer(), 
                  in_folder="inputs", 
                  out_folder=None,
-                 plan_sim_file="plan_simulation.csv",
-                 param_plant_file = "Parametre_plante_Lgrass.csv",# un fichier de remplacement du modèle génétique qui génère une population de C et détermine le nombre de plantes du couvert        
+                 configuration_file="plan_simulation.csv",
                  id_scenario = 0,
+                 activate_genetic_model = False,
+                 genetic_model_folder = "modelgenet",
+                 generation_index = 1,
+                 outputs_graphs = False
                  ):
+        # create the output folders
         if out_folder is not None:
+            self.out_folder = out_folder
             try:
                 os.mkdir(os.path.normpath(out_folder))
                 print("Directory ", out_folder, " Created ")
             except FileExistsError:
                 pass
 
-            # output folder for l-egume
-            out_folder = os.path.normpath(out_folder)
-            self.out_folder = os.path.join(out_folder, name)
-            try:
-                os.mkdir(os.path.normpath(self.out_folder))
-                print("Directory ", self.out_folder, " Created ")
-            except FileExistsError:
-                pass
-            create_child_folder(self.out_folder, "brut")
+            create_child_folder(self.out_folder, "data")
             create_child_folder(self.out_folder, "graphs")
 
         else:
@@ -44,66 +46,123 @@ class Lgrass_wrapper:
         self.global_index = indexer.global_order.index(name)
         self.lgrass_index = indexer.lgrass_names.index(name)
 
-        # paramètres plantes
-        path_param = os.path.join(in_folder, "Parametre_plante_Lgrass.xls")
-
-        onglet1 = "FL"
-        onglet2 = "FC"
-        TableParamP1 = pd.read_excel(path_param, sheet_name=onglet1)
-        TableParamP2 = pd.read_excel(path_param, sheet_name=onglet2)
-        self.paramP1 = dict(zip(TableParamP1["name"], TableParamP1["value"]))
-        self.paramP2 = dict(zip(TableParamP2["name"], TableParamP2["value"]))
-
         # plan de simulation
-        self.plan_sim = pd.read_csv(os.path.join(in_folder, plan_sim_file), sep=',')
-        self.row = self.plan_sim.iloc[id_scenario]
-        # données carbone
+        self.setup_list = pd.read_csv(os.path.join(in_folder, configuration_file), sep=',')
+        self.setup = self.setup_list.iloc[id_scenario]
+        self.simulation_name = self.setup["name"]
 
-        # other data
+        # initialisation du modèle génétique
+        if activate_genetic_model:
+            self.simulation_name =  self.setup["name"] + "_G" + str(generation_index) 
 
-        # init flowering_param
+            self.genet_src = os.path.join(in_folder, 'insim.txt')
+            self.genet_dst = genetic_model_folder
+            if os.name == "posix" :
+                self.genet_exe = 'simpraise'    
+            else:
+                self.genet_exe = 'simpraise.exe'
 
-        # init lsystem
-        self.lpy_filename = os.path.join(lgrass.__path__[0], 'lgrass.lpy')
-        self.lsystem = lpy.Lsystem(self.lpy_filename)
-        self.lsystem.name_sim = name
+        # plants carbon data
+        plants_carbon_data = os.path.join(in_folder, 'liste_plantes.csv')
+
+        # option reproduction des plantes
+        opt_repro = self.setup["option_reproduction"]
+        in_genet_file = os.path.join(genetic_model_folder, 'ped.r') if opt_repro in ('spikelets', 'SPPR_2012') else None
+
+        # init lsystem    
+        lpy_filename = os.path.join(os.path.dirname(prf.__file__), 'lgrass.lpy')
+        self.lsystem = lpy.Lsystem(lpy_filename)
+        self.lsystem.name_sim = self.simulation_name
+
+        ## Lsystem parameters
+        # initialisation parameters
+        self.lsystem.ParamP,\
+        self.lsystem.nb_plantes,\
+        self.lsystem.NBlignes,\
+        self.lsystem.NBcolonnes,\
+        self.lsystem.posPlante,\
+        self.lsystem.Plantes, \
+        self.lsystem.Genotypes,\
+        self.lsystem.flowering_model = prf.define_param(in_param_file=plants_carbon_data, 
+                                                        in_genet_file=in_genet_file,
+                                                        out_param_file=os.path.join(out_folder, "data", self.simulation_name + '.csv'), 
+                                                        id_gener=generation_index, 
+                                                        opt_repro=opt_repro)
+        
+        # options and more parameters
+        self.lsystem.option_tallage = self.setup["option_tallage"]
+        self.lsystem.option_senescence = self.setup["option_senescence"]
+        self.lsystem.option_floraison = self.setup["option_floraison"]
+        self.lsystem.option_tiller_regression = self.setup["option_tiller_regression"]
+        self.lsystem.option_morphogenetic_regulation_by_carbone = self.setup["option_morphogenetic_regulation_by_carbone"]
+        self.lsystem.derivationLength = int(self.setup["derivationLength"])
+        self.lsystem.sowing_date = self.setup["sowing_date"]
+        self.lsystem.site = self.setup["site"]
+        self.lsystem.meteo = meteo_ephem.import_meteo_data(self.setup["meteo_path"], self.setup['sowing_date'], self.setup['site'])
+        self.lsystem.output_induction_file_name = name + '_' + 'induction'
+        self.lsystem.output_organ_lengths_file_name = name + '_' + 'organ_lengths'
+
+        # Gestion des tontes
+        if self.setup["option_tontes"]:
+            self.lsystem.cutting_dates, self.lsystem.derivationLength = cuts.define_cutting_dates(self.lsystem.meteo,
+                                                                                        int(self.setup["derivationLength"]),
+                                                                                        self.setup["cutting_freq"],
+                                                                                        self.setup["cutting_start"])
+        else:
+            self.lsystem.cutting_dates = []
+
+        # initalise lstring
         self.lstring = self.lsystem.axiom
 
-        # transmet les options au lsystem
+        # Gestion caribu
+        # opt_caribu = self.setup["option_caribu"]
+        # if opt_caribu:
+        #     dico_caribu = run_caribu_lgrass.init(meteo=self.lsystem.meteo, nb_plantes=self.lsystem.nb_plantes, scenario=self.setup)
+        #     self.lsystem.BiomProd = [0.] * self.lsystem.nb_plantes
+        #     # Rédaction d'un fichier de sortie
+        #     path_out = os.path.join(out_folder, name + '_caribu.csv')
+        #     output = open(path_out, 'w')
+        #     output.write("GDD;Date;Day;nb_talles;biomasse_aerienne;surface_foliaire;lstring" + "\n")
+
+    def derive(self, t):
+        self.lstring = self.lsystem.derive(self.lstring, t, 1)
 
     def light_inputs(self):
-        return self.scene
+        return self.lsystem.sceneInterpretation(self.lstring)
 
     def light_results(self, lighting):
         self.energy = lighting.results_organs().mean()["par Eabs"]
-
-    def soil_inputs(self, soil_dimensions):
-        nb_plants = 1
-
-        N_content_roots_per_plant = [0.5] * nb_plants
-        plants_light_interception = [0.4] * nb_plants
-
-        roots_length = 6.0  # m
-        roots_length_per_plant_per_soil_layer = []
-        for i in range(nb_plants):
-            # on répartit de manière homogène les racines à travers les couches du sol
-            # convertit m en cm # --> peut etre en metre finalement
-            rootLen_i = numpy.ones(soil_dimensions) * roots_length / numpy.prod(soil_dimensions)
-            roots_length_per_plant_per_soil_layer.append(rootLen_i)
-
-        return (
-            N_content_roots_per_plant,
-            roots_length_per_plant_per_soil_layer,
-            [self.soil_parameters] * nb_plants,
-            plants_light_interception,
-        )
-
-    def soil_results(self, uptakeN):
         pass
 
     def run(self):
         pass
 
     def end(self):
+        # Matrice de croisement des plantes
+        if self.setup["option_reproduction"] != "False":
+            self.genet_mat = prf.create_seeds(self.lstring, 
+                                                self.lsystem.nb_plantes, 
+                                                self.lsystem.nb_talle, 
+                                                self.setup["option_reproduction"], 
+                                                self.setup["cutting_freq"], 
+                                                self.lsystem.ParamP)
+            numpy.savetxt(os.path.join(self.out_folder, "data", str(self.setup["name"])  + "_mat.csv"), self.genet_mat)
+        else:
+            mat = 0
+
+        # Sauvegarder la lstring dans un répertoire pour pouvoir la charger dans une prochaine simulation
+        if self.setup['option_sauvegarde']:
+            gen_lstring.save_lstring(self.lstring, self.lsystem)
+
+        csv_generator = CsvGenerator(self.lstring, self.setup["name"], os.path.join(self.out_folder, "data"))
+        csv_generator.metadata_to_csv(self.lsystem)
+        csv_generator.leaves_to_csv()
+        csv_generator.internodes_to_csv()
+        csv_generator.apex_to_csv()
+
+        # Vider le lsystem
         self.lsystem.clear()
-        print("--- END ---")
+        print(''.join((self.setup["name"], " - done")))
+
+    def energy(self):
+        return self.lsystem.meteo[self.lsystem.meteo.experimental_day == self.lsystem.current_day].PAR_incident.iloc[0]

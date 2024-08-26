@@ -1,0 +1,6 @@
+Le nombre de fondateurs ne peut pas varier d'une génération à l'autre dans le modèle d'origine.
+Ceci car la colonne 6 du fichier ped.r (ped(i)%sel dans le code source)
+contenant les potentiels fondateurs de la prochaine génération, est anticipée et préremplie dès la création
+de la génération actuelle.
+S'il y a 2 fondateurs à l'origine pour n candidats à générer,
+parmi ces n candidats seront tirés 2 fondateurs de la génération successive, et ainsi de suite.
