@@ -1,3 +1,5 @@
+inputs_lgrass/modelgenet_*
+
 *.pyc
 *.pyf
 *.so

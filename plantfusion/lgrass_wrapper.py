@@ -13,6 +13,7 @@ from lgrass.output_data import CsvGenerator
 
 from plantfusion.utils import create_child_folder
 from plantfusion.indexer import Indexer
+from plantfusion.light_wrapper import Light_wrapper
 
 
 class Lgrass_wrapper:
@@ -22,6 +23,7 @@ class Lgrass_wrapper:
                  out_folder=None,
                  configuration_file="plan_simulation.csv",
                  id_scenario = 0,
+                 caribu_parameters_file = "param_caribu",
                  activate_genetic_model = False,
                  genetic_model_folder = "modelgenet",
                  generation_index = 1,
@@ -73,6 +75,10 @@ class Lgrass_wrapper:
 
         # plants carbon data
         plants_carbon_data = os.path.join(in_folder, 'liste_plantes.csv')
+
+        # CARIBU additionnal parameters
+        self.lighting_parameters = pd.read_csv(os.path.join(in_folder, caribu_parameters_file+".csv"), sep=';', header=0)
+        self.lighting_parameters = dict(zip(self.lighting_parameters, self.lighting_parameters.iloc[0, :]))
 
         # option reproduction des plantes
         opt_repro = self.setup["option_reproduction"]
@@ -126,15 +132,7 @@ class Lgrass_wrapper:
         # initalise lstring
         self.lstring = self.lsystem.axiom
 
-        # Gestion caribu
-        # opt_caribu = self.setup["option_caribu"]
-        # if opt_caribu:
-        #     dico_caribu = run_caribu_lgrass.init(meteo=self.lsystem.meteo, nb_plantes=self.lsystem.nb_plantes, scenario=self.setup)
-        #     self.lsystem.BiomProd = [0.] * self.lsystem.nb_plantes
-        #     # Rédaction d'un fichier de sortie
-        #     path_out = os.path.join(out_folder, name + '_caribu.csv')
-        #     output = open(path_out, 'w')
-        #     output.write("GDD;Date;Day;nb_talles;biomasse_aerienne;surface_foliaire;lstring" + "\n")
+        self.lsystem.current_day = 1
 
     def derive(self, t):
         self.lstring = self.lsystem.derive(self.lstring, t, 1)
@@ -142,9 +140,52 @@ class Lgrass_wrapper:
     def light_inputs(self):
         return self.lsystem.sceneInterpretation(self.lstring)
 
-    def light_results(self, lighting):
-        self.energy = lighting.results_organs().mean()["par Eabs"]
-        pass
+    def light_results(self, lighting:Light_wrapper):
+
+        results = lighting.results_organs()
+        
+        # biomass computation
+        biomass_production = []
+        if not results.empty :
+            for plant_id in range(self.lsystem.nb_plantes):
+                # filter to only organ within the current plant
+                list_organs = [ i for i in results["Organ"] if self.lstring[i][0].id_plante == plant_id ]
+                df_plant = results[results["Organ"].isin(list_organs)]
+
+                # radiation integered with organ surface
+                energy_per_plant = (df_plant["par Ei"] * df_plant["Area"]).sum()
+                biomass_production.append(energy_per_plant * self.lighting_parameters['RUE'])  # Ray: MJ PAR ; RUE : g MJ-1
+
+        self.lsystem.BiomProd = biomass_production
+        
+        # # tiller regression option (not returned yet)
+        # if self.lsystem.option_tiller_regression:
+            
+        #     # time condition (always true ?)
+        #     if self.lsystem.current_day - self.lighting_parameters['period_considered_tiller_regression'] <= self.lsystem.current_day:
+        #         if len(self.lsystem.tiller_appearance) > 0:
+        #             # plant loop
+        #             for id_plante in numpy.unique(self.lsystem.tiller_appearance.id_plante):
+        #                 plant_tillers = self.lsystem.tiller_appearance[self.lsystem.tiller_appearance.id_plante == id_plante]
+        #                 youngest_tillers = plant_tillers[
+        #                     plant_tillers.appearance_date == max(plant_tillers.appearance_date)]
+        #                 youngest_tillers_radiations = pd.DataFrame()
+                        
+        #                 # talle loop
+        #                 for id_talle in youngest_tillers.id_talle:                            
+        #                     # filter organ in the actual talle and plant
+        #                     list_organs = [ i for i in results["Organ"] if self.lstring[i][0].id_plante == id_plante and self.lstring[i][0].id_talle == id_talle]
+        #                     df_plant_talle = results[results["Organ"].isin(list_organs)]
+        #                     tiller_raditation = (df_plant_talle["par Ei"] * df_plant_talle["Area"]).sum() / df_plant_talle["Area"].sum()
+                            
+        #                     youngest_tillers_radiations = pd.concat([youngest_tillers_radiations,
+        #                         pd.DataFrame([{'id_talle': [id_talle], 'Ei_tiller': [tiller_raditation]}])], ignore_index=True)
+
+        #                 potential_tiller_to_remove = youngest_tillers_radiations[
+        #                     youngest_tillers_radiations.Ei_tiller == min(youngest_tillers_radiations.Ei_tiller)]
+        #                 if potential_tiller_to_remove.Ei_tiller.item() <= self.lighting_parameters['radiation_threshold']:
+        #                     tiller_to_remove = pd.concat([tiller_to_remove, pd.DataFrame([
+        #                         {'id_plante': [id_plante], 'id_talle': [potential_tiller_to_remove.id_talle.item()]}])], ignore_index=True)
 
     def run(self):
         pass
@@ -183,5 +224,14 @@ class Lgrass_wrapper:
         self.lsystem.clear()
         print(''.join((self.simulation_name, " - done")))
 
+    def doy(self):
+        return self.lsystem.current_day
+
     def energy(self):
         return self.lsystem.meteo[self.lsystem.meteo.experimental_day == self.lsystem.current_day].PAR_incident.iloc[0]
+    
+
+def lgrass_soil_domain(espacement=50, rows=1, columns=1):
+    return ((-espacement / 2, -espacement / 2), 
+                (espacement * (rows - 1) + espacement / 2,
+               espacement * (columns - 1) + espacement / 2))

@@ -4,7 +4,7 @@ import datetime
 
 from lgrass import param_reproduction_functions as prf
 
-from plantfusion.lgrass_wrapper import Lgrass_wrapper
+from plantfusion.lgrass_wrapper import Lgrass_wrapper, lgrass_soil_domain
 from plantfusion.light_wrapper import Light_wrapper
 from plantfusion.indexer import Indexer
 from plantfusion.planter import Planter
@@ -19,8 +19,8 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
 
     plants_name = "lgrass"
     index_log = Indexer(global_order=[plants_name], lgrass_names=[plants_name])
-    planter = Planter(generation_type="default", indexer=index_log)
-    
+    planter = Planter(generation_type="default", indexer=index_log, xy_plane=lgrass_soil_domain())
+
     lgrass = Lgrass_wrapper(name=plants_name,
                             indexer=index_log,
                             in_folder=in_folder, 
@@ -31,14 +31,14 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
                             outputs_graphs=graphs)
 
 
-    # lighting = Light_wrapper(
-    #     lightmodel="caribu", 
-    #     out_folder=out_folder, 
-    #     sky="turtle46",
-    #     planter=planter, 
-    #     indexer=index_log,
-    #     writegeo=write_geo
-    # )
+    lighting = Light_wrapper(
+        lightmodel="caribu", 
+        out_folder=out_folder, 
+        sky="turtle46",
+        planter=planter, 
+        indexer=index_log,
+        writegeo=write_geo
+    )
 
     current_time_of_the_system = time.time()
     prf.rungenet(lgrass.genet_src, lgrass.genet_dst, lgrass.genet_exe, None, 0)
@@ -59,11 +59,13 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
         for t in range(0, lgrass.lsystem.derivationLength):
             lgrass.derive(t)
 
-            # scene_lgrass = lgrass.light_inputs()
-            # lighting.run(scenes=[scene_lgrass], day=lgrass.doy(t), hour=lgrass.hour(t))
-            # lgrass.light_results(energy=lgrass.energy(t), lighting=lighting)
-
-            lgrass.run()
+            if lgrass.setup["option_morphogenetic_regulation_by_carbone"] :
+                scene_lgrass = lgrass.light_inputs()
+                lighting.run(energy=lgrass.energy(), scenes=[scene_lgrass])
+                lgrass.light_results(lighting=lighting)
+            
+            # empty run
+            # lgrass.run()
 
         lgrass.end()
 
