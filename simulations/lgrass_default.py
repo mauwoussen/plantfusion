@@ -87,7 +87,7 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
                 lighting.run(energy=lgrass.energy(), scenes=[scene_lgrass])
                 lgrass.light_results(lighting=lighting)
 
-            # empty run
+            # empty
             # lgrass.run()
 
         lgrass.end()
