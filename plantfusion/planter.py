@@ -124,6 +124,7 @@ class Planter:
 
         self.legume_nbcote = []
         self.wheat_positions = [[] for i in range(len(self.indexer.wheat_names))]
+        self.lgrass_positions = [[] for i in range(len(self.indexer.lgrass_names))]
         self.other_positions = [[] for i in range(len(self.indexer.other_names))]
 
         self.domain = ((0.0, 0.0), (xy_square_length, xy_square_length))
@@ -364,6 +365,43 @@ class Planter:
                 )
 
         self.other_positions[indice_instance] = positions
+
+        return positions
+    
+    def generate_random_lgrass(self, indice_instance=0, seed=None):
+        """Compute random plant positions for fspm other than l-egume and wheat
+
+        Parameters
+        ----------
+        indice_instance : int, optional
+            specy ID corresponding to plants to generate, by default 0
+        seed : int, optional
+            random seed, by default None
+
+        Returns
+        -------
+        list of tuple
+            list of plant positions (x, y, z)
+        """        
+        if seed is not None:
+            s = seed
+        else:
+            s = 1234
+        random.seed(s)
+        numpy.random.seed(s)
+
+        # tirage des positions 
+        # list de 2-list des positions [x, y]
+        if self.lgrass_positions[indice_instance] != [] :
+            positions = self.lgrass_positions[indice_instance]
+        else:
+            positions = []
+            for i in range(self.number_of_plants[self.indexer.lgrass_index[indice_instance]]):
+                positions.append(
+                    [numpy.random.uniform(0.0, self.domain[1][0]), numpy.random.uniform(0.0, self.domain[1][0])]
+                )
+
+        self.lgrass_positions[indice_instance] = positions
 
         return positions
     

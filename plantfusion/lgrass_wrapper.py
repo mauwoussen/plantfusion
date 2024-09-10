@@ -13,6 +13,7 @@ from lgrass.output_data import CsvGenerator
 
 from plantfusion.utils import create_child_folder
 from plantfusion.indexer import Indexer
+from plantfusion.planter import Planter
 from plantfusion.light_wrapper import Light_wrapper
 
 
@@ -52,6 +53,7 @@ class Lgrass_wrapper:
         self,
         name="lgrass",
         indexer=Indexer(),
+        planter=Planter(),
         in_folder="inputs",
         out_folder=None,
         configuration_file="plan_simulation.csv",
@@ -134,7 +136,7 @@ class Lgrass_wrapper:
             self.lsystem.nb_plantes,
             self.lsystem.NBlignes,
             self.lsystem.NBcolonnes,
-            self.lsystem.posPlante,
+            posPlante,
             self.lsystem.Plantes,
             self.lsystem.Genotypes,
             self.lsystem.flowering_model,
@@ -145,6 +147,14 @@ class Lgrass_wrapper:
             id_gener=generation_index,
             opt_repro=opt_repro,
         )
+        
+        # plant positions
+        if planter.generation_type == "default":
+            self.lsystem.posPlante = posPlante
+        
+        elif planter.generation_type == "random":
+            self.lsystem.posPlante = planter.generate_random_lgrass(indice_instance=self.lgrass_index)
+
 
         # options and more parameters
         self.lsystem.option_tallage = self.setup["option_tallage"]
