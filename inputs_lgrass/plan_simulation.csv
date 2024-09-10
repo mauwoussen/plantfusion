@@ -4,3 +4,4 @@ scenario_test_simpraise1,1800,inputs_lgrass/meteo_file.csv,2018_11_13,LUSIGNAN,4
 simpraise_coupes_frequentes,1800,inputs_lgrass/meteo_file.csv,2018_11_13,LUSIGNAN,4,7,2019_03_15,True,True,False,False,SPPR_2012,False,False,False,False
 simpraise_sans_coupe,1800,inputs_lgrass/meteo_file.csv,2018_11_13,LUSIGNAN,4,0,,False,True,False,False,SPPR_2012,False,False,False,False
 example_lsystem,100,inputs_lgrass/meteo_file.csv,2018_11_13,LUSIGNAN,1,14,2019_01_15,False,True,False,False,,False,False,False,False
+example_simpraise_legume,400,inputs_lgrass/meteo_file.csv,2018_11_13,LUSIGNAN,1,14,,False,True,False,True,spikelets,False,False,True,False

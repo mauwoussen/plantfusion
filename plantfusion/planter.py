@@ -84,12 +84,14 @@ class Planter:
         self.indexer = indexer
         self.number_of_plants: list = [0 for i in indexer.global_order]
 
-        # les lsystem l-egume sont par défaut en cm et le reste en m
+        # les lsystem l-egume et l-grass sont par défaut en cm et le reste en m
         self.transformations: dict = {"scenes unit": {}}
         for i in range(len(self.indexer.global_order)):
             self.transformations["scenes unit"][i] = "m"
         for i in self.indexer.legume_index:
             self.transformations["scenes unit"][i] = "cm"
+        for i in self.indexer.lgrass_index:
+            self.transformations["scenes unit"][i] = "mm"
 
         if generation_type == "default":
             self.__default_preconfigured(legume_cote, inter_rows, plant_density, xy_plane, translate, seed)

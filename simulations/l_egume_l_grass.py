@@ -40,6 +40,7 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
         out_folder=out_folder,
         id_scenario=scenario_lgrass,
         activate_genetic_model=False,
+        genetic_model_folder=os.path.join(in_folder_lgrass, "modelgenet"),
         outputs_graphs=lgrass_graph,
     )
 
@@ -61,6 +62,7 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
         current_time_of_the_system = time.time()
         for t in range(legume.lsystem.derivationLength):
             legume.derive(t)
+            lgrass.derive(t)
 
             scene_legume = legume.light_inputs(elements="triangles")
             scene_lgrass = lgrass.light_inputs()
@@ -94,15 +96,16 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
 
     finally:
         legume.end()
+        lgrass.end()
 
 
 if __name__ == "__main__":
     in_folder_legume = "inputs_soil_legume"
     in_folder_lgrass = "inputs_lgrass"
     out_folder = "outputs/lgrass_legume"
-    scenario_legume = 1711
-    scenario_lgrass = 0
-    write_geo = False
+    scenario_legume = 1122
+    scenario_lgrass = 5
+    write_geo = True
     lgrass_graph = False
 
     simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, scenario_lgrass, write_geo=write_geo, lgrass_graph=lgrass_graph)

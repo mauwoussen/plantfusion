@@ -1,6 +1,6 @@
 import os
 import shutil
-import pandas as pd
+import pandas
 import numpy
 
 import openalea.lpy as lpy
@@ -85,7 +85,7 @@ class Lgrass_wrapper:
         self.lgrass_index = indexer.lgrass_names.index(name)
 
         # plan de simulation
-        self.setup_list = pd.read_csv(os.path.join(in_folder, configuration_file), sep=",")
+        self.setup_list = pandas.read_csv(os.path.join(in_folder, configuration_file), sep=",")
         self.setup = self.setup_list.iloc[id_scenario]
         self.simulation_name = self.setup["name"]
 
@@ -112,10 +112,11 @@ class Lgrass_wrapper:
         plants_carbon_data = os.path.join(in_folder, "liste_plantes.csv")
 
         # CARIBU additionnal parameters
-        self.lighting_parameters = pd.read_csv(
+        self.lighting_parameters = pandas.read_csv(
             os.path.join(in_folder, caribu_parameters_file + ".csv"), sep=";", header=0
         )
         self.lighting_parameters = dict(zip(self.lighting_parameters, self.lighting_parameters.iloc[0, :]))
+
 
         # option reproduction des plantes
         opt_repro = self.setup["option_reproduction"]
@@ -164,6 +165,9 @@ class Lgrass_wrapper:
         self.lsystem.output_induction_file_name = self.simulation_name + "_" + "induction"
         self.lsystem.output_organ_lengths_file_name = self.simulation_name + "_" + "organ_lengths"
         self.lsystem.option_graphic_outputs = outputs_graphs
+
+        # set display lsystem
+        self.lsystem.display_only_leaves = True
 
         # Gestion des tontes
         if self.setup["option_tontes"]:
@@ -214,7 +218,15 @@ class Lgrass_wrapper:
             lighting results and parameters
         """        
 
-        results = lighting.results_organs()
+        # filtering by vegetation type in the global simulation
+        results = pandas.DataFrame({})
+        out = lighting.results_organs()
+        if isinstance(self.global_index, list):
+            filter = out["VegetationType"].isin(self.global_index)
+        else:
+            filter = out.VegetationType == self.global_index
+        results = out[filter]
+        
 
         # biomass computation
         biomass_production = []
@@ -305,7 +317,7 @@ class Lgrass_wrapper:
         print("".join((self.simulation_name, " - done")))
 
     def doy(self):
-        """Day of the year
+        """Current thermal day
 
         Returns
         -------
