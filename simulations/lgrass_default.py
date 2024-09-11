@@ -80,12 +80,15 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
 
         # daily loop
         for t in range(0, lgrass.lsystem.derivationLength):
+            thermal_day = lgrass.lsystem.current_day
             lgrass.derive(t)
 
-            if lgrass.setup["option_morphogenetic_regulation_by_carbone"]:
-                scene_lgrass = lgrass.light_inputs()
-                lighting.run(energy=lgrass.energy(), scenes=[scene_lgrass])
-                lgrass.light_results(lighting=lighting)
+            # execute CARIBU on each new thermal day
+            if thermal_day < lgrass.lsystem.current_day :
+                if lgrass.setup["option_morphogenetic_regulation_by_carbone"]:
+                    scene_lgrass = lgrass.light_inputs()
+                    lighting.run(energy=lgrass.energy(), scenes=[scene_lgrass])
+                    lgrass.light_results(lighting=lighting)
 
             # empty
             # lgrass.run()
@@ -105,6 +108,6 @@ if __name__ == "__main__":
     out_folder = "outputs/lgrass_default"
     write_geo = True
     graphs = True
-    scenario_index = 0
+    scenario_index = 1
 
     simulation(in_folder, genetic_model_folder, out_folder, scenario_index, write_geo, graphs)

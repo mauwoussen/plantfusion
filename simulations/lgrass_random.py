@@ -41,7 +41,8 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
     index_log = Indexer(global_order=[plants_name], lgrass_names=[plants_name])
     
     plant_density = {plants_name : 400}
-    planter = Planter(generation_type="random", plant_density=plant_density)
+    xy_square_length = 0.5 # m
+    planter = Planter(generation_type="random", indexer=index_log, plant_density=plant_density, xy_square_length=xy_square_length)
 
     lgrass = Lgrass_wrapper(
         name=plants_name,
@@ -82,12 +83,15 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
 
         # daily loop
         for t in range(0, lgrass.lsystem.derivationLength):
+            thermal_day = lgrass.lsystem.current_day
             lgrass.derive(t)
 
-            if lgrass.setup["option_morphogenetic_regulation_by_carbone"]:
-                scene_lgrass = lgrass.light_inputs()
-                lighting.run(energy=lgrass.energy(), scenes=[scene_lgrass])
-                lgrass.light_results(lighting=lighting)
+            # execute CARIBU on each new thermal day
+            if thermal_day < lgrass.lsystem.current_day :
+                if lgrass.setup["option_morphogenetic_regulation_by_carbone"]:
+                    scene_lgrass = lgrass.light_inputs()
+                    lighting.run(energy=lgrass.energy(), scenes=[scene_lgrass])
+                    lgrass.light_results(lighting=lighting)
 
             # empty
             # lgrass.run()

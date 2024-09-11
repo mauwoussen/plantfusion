@@ -62,6 +62,8 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
         current_time_of_the_system = time.time()
         for t in range(legume.lsystem.derivationLength):
             legume.derive(t)
+
+            thermal_day = lgrass.lsystem.current_day
             lgrass.derive(t)
 
             scene_legume = legume.light_inputs(elements="triangles")
@@ -69,11 +71,12 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
             lighting.run(
                 scenes=[scene_legume, scene_lgrass], day=legume.doy(), parunit="RG"
             )
-            legume.light_results(legume.energy(), lighting)
+        
+            if thermal_day < lgrass.lsystem.current_day :
+                if lgrass.setup["option_morphogenetic_regulation_by_carbone"]:
+                    lgrass.light_results(lighting=lighting)
 
-            if lgrass.setup["option_morphogenetic_regulation_by_carbone"]:
-                lgrass.light_results(lighting=lighting)
-            
+            legume.light_results(legume.energy(), lighting)    
             (
                 N_content_roots_per_plant,
                 roots_length_per_plant_per_soil_layer,
