@@ -41,7 +41,7 @@ def simulation(
     generation_type = "row"
     plant_density = {wheat1_name : 250, wheat2_name : 450} # plantes.m-2
     inter_rows = 0.10 # m
-    planter = Planter(generation_type=generation_type, indexer=indexer, plant_density=plant_density, inter_rows=inter_rows, save_wheat_positions=True)
+    planter = Planter(generation_type=generation_type, indexer=indexer, plant_density=plant_density, inter_rows=inter_rows, static_wheat_positions=True, save_plant_positions=True)
 
 
     wheat1 = Wheat_wrapper(

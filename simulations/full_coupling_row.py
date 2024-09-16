@@ -45,7 +45,7 @@ def simulation(
     generation_type = "row"
     plant_density = {wheat_name : 150, legume_name : 250}
     inter_rows = 0.10 # m
-    planter = Planter(generation_type=generation_type, indexer=indexer, plant_density=plant_density, inter_rows=inter_rows, save_wheat_positions=True)
+    planter = Planter(generation_type=generation_type, indexer=indexer, plant_density=plant_density, inter_rows=inter_rows, static_wheat_positions=True)
 
     legume = L_egume_wrapper(
         name=legume_name, indexer=indexer, in_folder=in_folder_legume, out_folder=out_folder, IDusm=id_usm, planter=planter, caribu_scene=True

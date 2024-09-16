@@ -53,7 +53,7 @@ class Planter:
         Possibility to translate some of the fspm geometric scenes by a 3d vector. An entry is { wrapper.name : (tx, ty, tz) }, by default None
     noise_plant_positions : float, optional
         noise around generated positions in m, by default 0.0
-    save_wheat_positions : bool, optional
+    static_wheat_positions : bool, optional
         avoid to regenerate wheat positions at each timestep, by default False
     seed : int, optional
         seed for random and numpy, by default None
@@ -71,7 +71,9 @@ class Planter:
         xy_square_length=0.5,
         translate=None,
         noise_plant_positions=0.0,
-        save_wheat_positions=False,
+        static_wheat_positions=False,
+        save_plant_positions=False,
+        scanning_ray_nearest_plants=0.0,
         seed=None,
     ) -> None:
         """Constructor, computes a global soil domain for the simulation
@@ -79,8 +81,9 @@ class Planter:
         """        
         self.generation_type = generation_type
         self.plant_density = plant_density
-        self.save_wheat_positions = save_wheat_positions
+        self.static_wheat_positions = static_wheat_positions
         self.noise_plant_positions = noise_plant_positions
+        self.save_plant_positions = save_plant_positions
         self.indexer = indexer
         self.number_of_plants: list = [0 for i in indexer.global_order]
 
@@ -92,7 +95,7 @@ class Planter:
             self.transformations["scenes unit"][i] = "cm"
         for i in self.indexer.lgrass_index:
             self.transformations["scenes unit"][i] = "mm"
-
+            
         if generation_type == "default":
             self.__default_preconfigured(legume_cote, inter_rows, plant_density, xy_plane, translate, seed)
             for name, nb_plt in legume_number_of_plants.items():
@@ -105,6 +108,18 @@ class Planter:
         elif generation_type == "row":
             self.__row(plant_density, inter_rows)
             self.type_domain = "mix"
+
+        # saving plant positions
+        if self.save_plant_positions:
+            self.plants_information = {"plant" : [], "FSPM name" : [], "FSPM global index" : [], "position" : [], "nearest neighbours" : []}
+            for i, n in enumerate(self.number_of_plants):
+                self.plants_information["plant"].extend([p for p in range(n)])
+                self.plants_information["FSPM name"].extend([indexer.global_order[i] for p in range(n)])
+                self.plants_information["FSPM global index"].extend([i for p in range(n)])
+                self.plants_information["position"].extend([[0., 0., 0.] for p in range(n)])
+                self.plants_information["nearest neighbours"].extend([None for p in range(n)])
+            
+            self.plants_information = pandas.DataFrame(self.plants_information)
 
     def __random(self, plant_density, xy_square_length):
         """Parameters for random generation type
@@ -374,7 +389,7 @@ class Planter:
         Parameters
         ----------
         indice_instance : int, optional
-            specy ID corresponding to plants to generate, by default 0
+            specy ID corresponding to plants to generate (indexer.lgrass_index), by default 0
         seed : int, optional
             random seed, by default None
 
@@ -417,7 +432,7 @@ class Planter:
         mtg : openalea.MTG
             MTG of one wheat
         indice_wheat_instance : int, optional
-            wheat ID in simulation (indexer.global_index), by default 0
+            wheat ID in simulation (indexer.wheat_index), by default 0
         stem_name : str, optional
             stem tag in the plantgl.Scene, by default "stem"
         leaf_name : str, optional
@@ -445,7 +460,7 @@ class Planter:
 
         # tirage des positions
         # list de 3-tuple des positions
-        if self.wheat_positions[indice_wheat_instance] != [] and self.save_wheat_positions:
+        if self.wheat_positions[indice_wheat_instance] != [] and self.static_wheat_positions:
             positions = self.wheat_positions[indice_wheat_instance]
         else:
             positions = []
@@ -453,6 +468,14 @@ class Planter:
                 positions.append(
                     (numpy.random.uniform(0.0, self.domain[1][0]), numpy.random.uniform(0.0, self.domain[1][0]), 0.0)
                 )
+
+            if self.save_plant_positions:
+                for i, p in enumerate(positions):
+                    filter = (self.plants_information["plant"]==i) & \
+                                (self.plants_information["FSPM global index"]==self.indexer.wheat_index[indice_wheat_instance])
+                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][0] = p[0]
+                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][1] = p[1]
+                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][2] = p[2]
 
         self.wheat_positions[indice_wheat_instance] = positions
 
@@ -524,7 +547,7 @@ class Planter:
         mtg : openalea.MTG
             MTG of one wheat
         indice_wheat_instance : int, optional
-            wheat ID in simulation (indexer.global_index), by default 0
+            wheat ID in simulation (indexer.wheat_index), by default 0
         stem_name : str, optional
             stem tag in the plantgl.Scene, by default "stem"
         leaf_name : str, optional
@@ -550,7 +573,7 @@ class Planter:
 
         initial_scene = adel_wheat.scene(mtg)
 
-        if self.wheat_positions[indice_wheat_instance] != [] and self.save_wheat_positions:
+        if self.wheat_positions[indice_wheat_instance] != [] and self.static_wheat_positions:
             positions = self.wheat_positions[indice_wheat_instance]
         else:
             positions = []
@@ -572,6 +595,15 @@ class Planter:
                         0.0,
                     )
                     positions.append(p)
+
+            if self.save_plant_positions:
+                # weird affectation with pandas.Dataframe; don't know why
+                for i, p in enumerate(positions):
+                    filter = (self.plants_information["plant"]==i) & \
+                                (self.plants_information["FSPM global index"]==self.indexer.wheat_index[indice_wheat_instance])
+                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][0] = p[0]
+                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][1] = p[1]
+                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][2] = p[2]
 
         self.wheat_positions[indice_wheat_instance] = positions
 
@@ -619,7 +651,7 @@ class Planter:
         leaf_name : str, optional
             leaf tag in the plantgl.Scene, by default "leaf"
         indice_wheat_instance : int, optional
-            wheat specy ID in simulation, by default 0
+            wheat specy ID in simulation (indexer.wheat_index), by default 0
         seed : int, optional
             random seed, by default None
 
@@ -648,6 +680,14 @@ class Planter:
             convunit=1,
         )
         self.wheat_positions[indice_wheat_instance] = positions
+
+        if self.save_plant_positions:
+            for i, p in enumerate(positions):
+                filter = (self.plants_information["plant"]==i) & \
+                            (self.plants_information["FSPM global index"]==self.indexer.wheat_index[indice_wheat_instance])
+                self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][0] = p[0]
+                self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][1] = p[1]
+                self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][2] = p[2]
 
         random.seed(1234)
 
