@@ -25,7 +25,7 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
     legume_name = "legume"
     lgrass_name = "lgrass"
     index_log = Indexer(global_order=[legume_name, lgrass_name], legume_names=[legume_name], lgrass_names=[lgrass_name])
-    planter = Planter(indexer=index_log, legume_cote={legume_name : 40.}, legume_number_of_plants={legume_name : 64})
+    planter = Planter(indexer=index_log, legume_cote={legume_name : 40.}, legume_number_of_plants={legume_name : 64}, save_plant_positions=True)
 
     # l-egume
     legume = L_egume_wrapper(
@@ -36,6 +36,7 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
     lgrass = Lgrass_wrapper(
         name=lgrass_name,
         indexer=index_log,
+        planter=planter,
         in_folder=in_folder_lgrass,
         out_folder=out_folder,
         id_scenario=scenario_lgrass,

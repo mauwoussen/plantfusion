@@ -20,7 +20,7 @@ def simulation(in_folder, out_folder, id_usm):
     plants_name = "legume"
     indexer = Indexer(global_order=[plants_name], legume_names=[plants_name])
 
-    planter = Planter(generation_type="default", indexer=indexer, legume_cote={plants_name : 40.}, legume_number_of_plants={plants_name : 64})
+    planter = Planter(generation_type="default", indexer=indexer, legume_cote={plants_name : 40.}, legume_number_of_plants={plants_name : 64}, save_plant_positions=True)
 
     legume = L_egume_wrapper(
         name=plants_name, indexer=indexer, in_folder=in_folder, out_folder=out_folder, IDusm=id_usm, planter=planter

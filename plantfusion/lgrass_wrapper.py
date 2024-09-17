@@ -155,6 +155,14 @@ class Lgrass_wrapper:
         elif planter.generation_type == "random":
             self.lsystem.posPlante = planter.generate_random_lgrass(indice_instance=self.lgrass_index)
 
+        if planter.save_plant_positions:
+            for i, p in enumerate(posPlante):
+                planter.plants_information.loc[len(planter.plants_information)] = [i, 
+                                                                                    self.name, 
+                                                                                    self.global_index, 
+                                                                                    [float(p[0])*0.01, float(p[1])*0.01, 0.], 
+                                                                                    []]
+
         # options and more parameters
         self.lsystem.option_tallage = self.setup["option_tallage"]
         self.lsystem.option_senescence = self.setup["option_senescence"]

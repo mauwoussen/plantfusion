@@ -97,6 +97,7 @@ class L_egume_wrapper(object):
         self.indexer = indexer
         self.global_index = indexer.global_order.index(name)
         self.legume_index = indexer.legume_names.index(name)
+        planter_copy = planter
 
         # read l-egume configuration files
         mn_path = os.path.join(in_folder, nameconfigfile)
@@ -146,6 +147,17 @@ class L_egume_wrapper(object):
             self.global_index = [index for index, item in enumerate(self.indexer.global_order) if item == self.name]
             self.legume_index = [index for index, item in enumerate(self.indexer.global_order) if item == self.name]
 
+            # saving plants positions in the planter
+            if planter_copy.save_plant_positions:
+                for i in self.global_index:
+                    for j in range(int(len(self.lsystem.carto)/len(self.global_index))):
+                        filter = (planter_copy.plants_information["plant"]==int(j+i*(len(self.lsystem.carto)/len(self.global_index)))) & \
+                                    (planter_copy.plants_information["FSPM global index"]==self.global_index[0])
+                        if not planter_copy.plants_information[filter].empty:
+                            planter_copy.plants_information.at[planter_copy.plants_information[filter].index[0], "FSPM global index"] = i
+                            planter_copy.plants_information.at[planter_copy.plants_information[filter].index[0], "plant"] = j
+                        lol = 3
+                    
 
         if planter is not None:
             if isinstance(self.global_index, list):
@@ -155,8 +167,28 @@ class L_egume_wrapper(object):
                 self.index_in_global_plants = [
                     sum(planter.number_of_plants[: self.global_index]),
                     sum(planter.number_of_plants[: self.global_index + 1]),
-                ]
+                ]                   
+        
+        # saving plants positions in the planter
+        if planter_copy.save_plant_positions:
+            if isinstance(self.global_index, list):
+                for i in self.global_index:
+                    for j in range(int(len(self.lsystem.carto)/len(self.global_index))):
+                        p = self.lsystem.carto[int(j+i*(len(self.lsystem.carto)/len(self.global_index)))]
+                        filter = (planter_copy.plants_information["plant"]==j) & \
+                                (planter_copy.plants_information["FSPM global index"]==i)
+                        if not planter_copy.plants_information[filter].empty:
+                            planter_copy.plants_information.at[planter_copy.plants_information[filter].index[0], "position"] = [x *0.01 for x in p]
 
+            else:
+                for i, p in enumerate(self.lsystem.carto):
+                    filter = (planter_copy.plants_information["plant"]==i) & \
+                            (planter_copy.plants_information["FSPM global index"]==self.global_index)
+                    if not planter_copy.plants_information[filter].empty:
+                        planter_copy.plants_information.at[planter_copy.plants_information[filter].index[0], "position"] = [x *0.01 for x in p]
+
+
+        planter = planter_copy
         self.res_trans = None
         self.res_abs_i = None
         self.invar: dict = {}

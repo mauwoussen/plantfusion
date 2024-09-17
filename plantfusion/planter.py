@@ -116,8 +116,8 @@ class Planter:
                 self.plants_information["plant"].extend([p for p in range(n)])
                 self.plants_information["FSPM name"].extend([indexer.global_order[i] for p in range(n)])
                 self.plants_information["FSPM global index"].extend([i for p in range(n)])
-                self.plants_information["position"].extend([[0., 0., 0.] for p in range(n)])
-                self.plants_information["nearest neighbours"].extend([None for p in range(n)])
+                self.plants_information["position"].extend([[] for p in range(n)])
+                self.plants_information["nearest neighbours"].extend([[] for p in range(n)])
             
             self.plants_information = pandas.DataFrame(self.plants_information)
 
@@ -473,9 +473,9 @@ class Planter:
                 for i, p in enumerate(positions):
                     filter = (self.plants_information["plant"]==i) & \
                                 (self.plants_information["FSPM global index"]==self.indexer.wheat_index[indice_wheat_instance])
-                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][0] = p[0]
-                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][1] = p[1]
-                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][2] = p[2]
+                    
+                    if not self.plants_information[filter].empty :
+                        self.plants_information.at[self.plants_information[filter].index[0], "position"] = p
 
         self.wheat_positions[indice_wheat_instance] = positions
 
@@ -601,9 +601,8 @@ class Planter:
                 for i, p in enumerate(positions):
                     filter = (self.plants_information["plant"]==i) & \
                                 (self.plants_information["FSPM global index"]==self.indexer.wheat_index[indice_wheat_instance])
-                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][0] = p[0]
-                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][1] = p[1]
-                    self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][2] = p[2]
+                    if not self.plants_information[filter].empty :
+                        self.plants_information.at[self.plants_information[filter].index[0], "position"] = p
 
         self.wheat_positions[indice_wheat_instance] = positions
 
@@ -685,9 +684,8 @@ class Planter:
             for i, p in enumerate(positions):
                 filter = (self.plants_information["plant"]==i) & \
                             (self.plants_information["FSPM global index"]==self.indexer.wheat_index[indice_wheat_instance])
-                self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][0] = p[0]
-                self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][1] = p[1]
-                self.plants_information[filter].at[self.plants_information[filter].index[0], "position"][2] = p[2]
+                if not self.plants_information[filter].empty :
+                    self.plants_information.at[self.plants_information[filter].index[0], "position"] = p
 
         random.seed(1234)
 

@@ -39,11 +39,12 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
 
     plants_name = "lgrass"
     index_log = Indexer(global_order=[plants_name], lgrass_names=[plants_name])
-    planter = Planter(generation_type="default", indexer=index_log, xy_plane=lgrass_soil_domain())
+    planter = Planter(generation_type="default", indexer=index_log, xy_plane=lgrass_soil_domain(), save_plant_positions=True)
 
     lgrass = Lgrass_wrapper(
         name=plants_name,
         indexer=index_log,
+        planter=planter,
         in_folder=in_folder,
         out_folder=out_folder,
         id_scenario=id_scenario,
