@@ -2,6 +2,7 @@ import os
 import shutil
 import pandas
 import numpy
+import math
 
 import openalea.lpy as lpy
 
@@ -149,8 +150,10 @@ class Lgrass_wrapper:
         )
         
         # plant positions
+        self.generation_type = planter.generation_type
         if planter.generation_type == "default":
             self.lsystem.posPlante = posPlante
+            self.lsystem.Espacement = float(posPlante[1][1] - posPlante[0][1])
         
         elif planter.generation_type == "random":
             self.lsystem.posPlante = planter.generate_random_lgrass(indice_instance=self.lgrass_index)
@@ -244,6 +247,7 @@ class Lgrass_wrapper:
             filter = out.VegetationType == self.global_index
         results = out[filter]
         
+        self.leaves_area = {}
 
         # biomass computation
         biomass_production = []
@@ -258,6 +262,9 @@ class Lgrass_wrapper:
                 biomass_production.append(
                     energy_per_plant * self.lighting_parameters["RUE"]
                 )  # Ray: MJ PAR ; RUE : g MJ-1
+
+                self.leaves_area[plant_id] = 0
+
 
         self.lsystem.BiomProd = biomass_production
 
@@ -333,6 +340,61 @@ class Lgrass_wrapper:
         self.lsystem.clear()
         print("".join((self.simulation_name, " - done")))
 
+    def _proximity_LAI(self, planter, lighting):
+        rapportS9_SSol_dict = {}
+
+        for row in self.plants_information.itertuples():
+
+            if self.generation_type == "default":
+                soil_surface = (len(row._5)+1) * (planter.scanning_ray/math.sqrt(2))**2
+            else:
+                soil_surface = math.pi * planter.scanning_ray**2
+
+        # surface_foliaire_plantes_autour / surface_au sol
+# def LAI_proximite(id_plante):
+#   """
+#   calcul du LAI proximite a partir surface plante cible (auto-ombrage) + surface des 8 plantes adjacentes
+#   """
+  
+#   def posTOnum(pos): #Determination de l'id de la plante a partir de la position
+#     id_plante = -1
+#     for i in range((NBlignes)*(NBcolonnes)):
+#       if (posPlante[i] == pos):
+#         id_plante = i
+#     return id_plante
+  
+#   def numTOpos(id_plante): #Determination de la position de la plante a partir de l'id
+#     return posPlante[id_plante]
+  
+#   def deplacPos(pos, depl): #Selectionne la plante adjacente donnee
+#     ret=list(pos)  #Cree une copie de pos
+#     if ((depl[0]==-1 or depl[0]==0 or depl[0]==1) and (depl[1]==-1 or depl[1]==0 or depl[1]==1)): #Valeurs entre -1 et 1 : plantes adjacentes et non a 2 espacements
+#       ret[0]=pos[0] + depl[0]
+#       ret[1]=pos[1] + depl[1]
+#       #Simulation d'un couvert de taille infini:
+#       if (ret[0] == -1): ret[0] = NBlignes-1
+#       if (ret[0] == NBlignes): ret[0] = 0
+#       if (ret[1] == -1): ret[1] = NBcolonnes-1
+#       if (ret[1] == NBcolonnes): ret[1] = 0
+#     return ret
+  
+#   def adj9Plantes(pos): #Fait la liste des plantes adjacentes + plante cible
+#     position_plantes_adjacentes = []
+#     for p in itertools.product([-1,0,1], [-1,0,1]):
+#       position_plantes_adjacentes.append(deplacPos(pos, p))
+#     return position_plantes_adjacentes
+  
+#   def surfol9Plantes(id_plante): #Calcule la surface foliaires des 9 plantes adjacentes
+#     position_plantes_adjacentes = adj9Plantes(numTOpos(id_plante)) # liste des positions des plantes adjacentes
+#     surface_9_plantes = 0
+#     for p in position_plantes_adjacentes:
+#       if posTOnum(p)>-1:
+#         surface_9_plantes += surface_foliaire_emergee[posTOnum(p)]
+#     return surface_9_plantes
+  
+#   nb_plantes = 9
+#   LAI_proximite = surfol9Plantes(id_plante) / (Espacement**2 * nb_plantes)
+#   return LAI_proximite
     def doy(self):
         """Current thermal day
 
@@ -370,8 +432,8 @@ def lgrass_soil_domain(espacement=50, rows=1, columns=1):
     -------
     tuple of tuple
         ((xmin, ymin), (xmax, ymax))
-    """    
-    return (
-        (-espacement / 2, -espacement / 2),
-        (espacement * (rows - 1) + espacement / 2, espacement * (columns - 1) + espacement / 2),
-    )
+    """   
+    # s = [[-espacement / 2, -espacement / 2],
+    #     [espacement * (rows - 1) + espacement / 2, espacement * (columns - 1) + espacement / 2]]
+
+    return ((0., 0.), (0.01 * espacement * (columns-1), 0.01 * espacement * (rows-1)))

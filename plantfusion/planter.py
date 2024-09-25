@@ -7,6 +7,7 @@
 import numpy
 import math
 import pandas
+import time
 
 import openalea.plantgl.all as plantgl
 import random
@@ -73,7 +74,6 @@ class Planter:
         noise_plant_positions=0.0,
         static_wheat_positions=False,
         save_plant_positions=False,
-        scanning_ray_nearest_plants=0.0,
         seed=None,
     ) -> None:
         """Constructor, computes a global soil domain for the simulation
@@ -821,3 +821,42 @@ class Planter:
             position_number += 1
 
         return duplicated_scene
+    
+
+    def scan_nearest_plants_neighours(self, scanning_ray=0.):
+        self.scanning_ray = scanning_ray
+        # cputime = time.time()
+        # op = 0
+        if scanning_ray > 0. and self.save_plant_positions:
+            plants_index = list(zip(self.plants_information["plant"], self.plants_information["FSPM global index"]))
+
+            for row in self.plants_information.itertuples():
+                current_plant_index = (row.plant, row._3)
+                p0 = row.position
+
+                # for n in plants_index:
+                #     p = self.plants_information[(self.plants_information.plant==n[0]) & (self.plants_information["FSPM global index"]==n[1])]["position"].values[0]
+                #     d = math.sqrt(sum([(x-y)*(x-y) for x,y in zip(p0[:2], p[:2])]))
+                #     op += 1
+                #     if d <= scanning_ray:
+                #         self.plants_information.at[self.plants_information[(self.plants_information.plant==row.plant) & 
+                #                                 (self.plants_information["FSPM global index"]==row._3)].index[0], "nearest neighbours"].append(n)
+                        
+                plants_list_to_test = list(set(plants_index) - set(row._5) - set([current_plant_index]))
+
+                for i,n in enumerate(plants_list_to_test):
+                    p = self.plants_information[(self.plants_information.plant==n[0]) & (self.plants_information["FSPM global index"]==n[1])]["position"].values[0]
+                    d = math.sqrt(sum([(x-y)*(x-y) for x,y in zip(p0[:2], p[:2])]))
+                    # op += 1
+                    if d <= scanning_ray:
+                        self.plants_information.at[self.plants_information[(self.plants_information.plant==row.plant) & 
+                                                (self.plants_information["FSPM global index"]==row._3)].index[0], "nearest neighbours"].append(n)
+                        
+                        self.plants_information.at[self.plants_information[(self.plants_information.plant==n[0]) & 
+                                                (self.plants_information["FSPM global index"]==n[1])].index[0], "nearest neighbours"].append(current_plant_index)
+        
+        else:
+            print("error -- save_plant_positions = %b and scanning_ray = %f" % (self.save_plant_positions, scanning_ray))
+
+        # print("scanning -- %.2f s -- nb op : %i" % ((time.time() - cputime), op))
+

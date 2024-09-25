@@ -39,7 +39,7 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
 
     plants_name = "lgrass"
     index_log = Indexer(global_order=[plants_name], lgrass_names=[plants_name])
-    planter = Planter(generation_type="default", indexer=index_log, xy_plane=lgrass_soil_domain(), save_plant_positions=True)
+    planter = Planter(generation_type="default", indexer=index_log, xy_plane=lgrass_soil_domain(espacement=1., rows=8, columns=8), save_plant_positions=True)
 
     lgrass = Lgrass_wrapper(
         name=plants_name,
@@ -61,6 +61,9 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
         indexer=index_log,
         writegeo=write_geo,
     )
+
+    scanning_ray = 0.015
+    planter.scan_nearest_plants_neighours(scanning_ray)
 
     current_time_of_the_system = time.time()
     prf.rungenet(lgrass.genet_src, lgrass.genet_dst, lgrass.genet_exe, None, 0)
@@ -85,7 +88,7 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
             lgrass.derive(t)
 
             # execute CARIBU on each new thermal day
-            if thermal_day < lgrass.lsystem.current_day :
+            if thermal_day < lgrass.lsystem.current_day or t == 0:
                 if lgrass.setup["option_morphogenetic_regulation_by_carbone"]:
                     scene_lgrass = lgrass.light_inputs()
                     lighting.run(energy=lgrass.energy(), scenes=[scene_lgrass])
@@ -109,6 +112,6 @@ if __name__ == "__main__":
     out_folder = "outputs/lgrass_default"
     write_geo = True
     graphs = True
-    scenario_index = 1
+    scenario_index = 0
 
     simulation(in_folder, genetic_model_folder, out_folder, scenario_index, write_geo, graphs)
