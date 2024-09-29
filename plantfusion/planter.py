@@ -823,7 +823,7 @@ class Planter:
         return duplicated_scene
     
 
-    def scan_nearest_plants_neighours(self, scanning_ray=0.):
+    def scan_nearest_plants_neighours(self, scanning_ray=0., type="infinite"):
         self.scanning_ray = scanning_ray
         # cputime = time.time()
         # op = 0

@@ -189,6 +189,9 @@ class Lgrass_wrapper:
         # set display lsystem
         self.lsystem.display_only_leaves = True
 
+        # external coupling mode
+        self.lsystem.option_external_coupling = True
+
         # Gestion des tontes
         if self.setup["option_tontes"]:
             self.lsystem.cutting_dates, self.lsystem.derivationLength = cuts.define_cutting_dates(
@@ -247,10 +250,14 @@ class Lgrass_wrapper:
             filter = out.VegetationType == self.global_index
         results = out[filter]
         
+        
+        self.leaves_area = {}
+
         self.leaves_area = {}
 
         # biomass computation
-        biomass_production = []
+        self.biomass_production = [0.] * self.lsystem.nb_plantes
+        self.leaves_area = [0.] * self.lsystem.nb_plantes
         if not results.empty:
             for plant_id in range(self.lsystem.nb_plantes):
                 # filter to only organ within the current plant
@@ -259,14 +266,9 @@ class Lgrass_wrapper:
 
                 # radiation integered with organ surface
                 energy_per_plant = (df_plant["par Ei"] * df_plant["Area"]).sum()
-                biomass_production.append(
-                    energy_per_plant * self.lighting_parameters["RUE"]
-                )  # Ray: MJ PAR ; RUE : g MJ-1
+                self.biomass_production[plant_id] = energy_per_plant * self.lighting_parameters["RUE"] # Ray: MJ PAR ; RUE : g MJ-1
 
-                self.leaves_area[plant_id] = 0
-
-
-        self.lsystem.BiomProd = biomass_production
+                self.leaves_area[plant_id] = df_plant["Area"].sum()
 
         # # tiller regression option (not returned yet)
         # if self.lsystem.option_tiller_regression:
@@ -297,8 +299,20 @@ class Lgrass_wrapper:
         #                     tiller_to_remove = pd.concat([tiller_to_remove, pd.DataFrame([
         #                         {'id_plante': [id_plante], 'id_talle': [potential_tiller_to_remove.id_talle.item()]}])], ignore_index=True)
 
-    def run(self):
-        pass
+    def run(self, planter):
+        
+        # Calcul LAI proximite
+        rapportS9_SSol_dict = self._proximity_LAI(planter)
+        
+        # dependance avec biomprod (couplage lumière)
+        Biomasse_racinaire, PourcentageFeuilGrowthRealized, PourcentageRootGrowthRealized = self._potential_plant_growth()
+
+        # copie dans le lsystem
+        self.lsystem.rapportS9_SSol_dict = rapportS9_SSol_dict
+        self.lsystem.Biomasse_racinaire = Biomasse_racinaire
+        self.lsystem.PourcentageFeuilGrowthRealized = PourcentageFeuilGrowthRealized
+        self.lsystem.PourcentageRootGrowthRealized = PourcentageRootGrowthRealized
+                
 
     def end(self):
         """Writes outputs and close the instance in the simulation
@@ -340,61 +354,67 @@ class Lgrass_wrapper:
         self.lsystem.clear()
         print("".join((self.simulation_name, " - done")))
 
-    def _proximity_LAI(self, planter, lighting):
-        rapportS9_SSol_dict = {}
+    def _proximity_LAI(self, planter):
+        local_LAI_by_plant = {}
 
-        for row in self.plants_information.itertuples():
+        for row in planter.plants_information.itertuples():
 
             if self.generation_type == "default":
                 soil_surface = (len(row._5)+1) * (planter.scanning_ray/math.sqrt(2))**2
             else:
                 soil_surface = math.pi * planter.scanning_ray**2
 
-        # surface_foliaire_plantes_autour / surface_au sol
-# def LAI_proximite(id_plante):
-#   """
-#   calcul du LAI proximite a partir surface plante cible (auto-ombrage) + surface des 8 plantes adjacentes
-#   """
-  
-#   def posTOnum(pos): #Determination de l'id de la plante a partir de la position
-#     id_plante = -1
-#     for i in range((NBlignes)*(NBcolonnes)):
-#       if (posPlante[i] == pos):
-#         id_plante = i
-#     return id_plante
-  
-#   def numTOpos(id_plante): #Determination de la position de la plante a partir de l'id
-#     return posPlante[id_plante]
-  
-#   def deplacPos(pos, depl): #Selectionne la plante adjacente donnee
-#     ret=list(pos)  #Cree une copie de pos
-#     if ((depl[0]==-1 or depl[0]==0 or depl[0]==1) and (depl[1]==-1 or depl[1]==0 or depl[1]==1)): #Valeurs entre -1 et 1 : plantes adjacentes et non a 2 espacements
-#       ret[0]=pos[0] + depl[0]
-#       ret[1]=pos[1] + depl[1]
-#       #Simulation d'un couvert de taille infini:
-#       if (ret[0] == -1): ret[0] = NBlignes-1
-#       if (ret[0] == NBlignes): ret[0] = 0
-#       if (ret[1] == -1): ret[1] = NBcolonnes-1
-#       if (ret[1] == NBcolonnes): ret[1] = 0
-#     return ret
-  
-#   def adj9Plantes(pos): #Fait la liste des plantes adjacentes + plante cible
-#     position_plantes_adjacentes = []
-#     for p in itertools.product([-1,0,1], [-1,0,1]):
-#       position_plantes_adjacentes.append(deplacPos(pos, p))
-#     return position_plantes_adjacentes
-  
-#   def surfol9Plantes(id_plante): #Calcule la surface foliaires des 9 plantes adjacentes
-#     position_plantes_adjacentes = adj9Plantes(numTOpos(id_plante)) # liste des positions des plantes adjacentes
-#     surface_9_plantes = 0
-#     for p in position_plantes_adjacentes:
-#       if posTOnum(p)>-1:
-#         surface_9_plantes += surface_foliaire_emergee[posTOnum(p)]
-#     return surface_9_plantes
-  
-#   nb_plantes = 9
-#   LAI_proximite = surfol9Plantes(id_plante) / (Espacement**2 * nb_plantes)
-#   return LAI_proximite
+            local_LAI_by_plant[row.plant] = sum([self.leaves_area[i[0]] for i in row._5] + [self.leaves_area[row.plant]]) / soil_surface
+        
+        return local_LAI_by_plant
+        
+    def _potential_plant_growth(self):
+        Biomasse_racinaire = self.lsystem.Biomasse_racinaire
+        PourcentageFeuilGrowthRealized = self.lsystem.PourcentageFeuilGrowthRealized
+        PourcentageRootGrowthRealized = self.lsystem.PourcentageRootGrowthRealized
+
+        for id_plante in range(self.lsystem.nb_plantes):
+            # Mise a jour biomasse et pourcentage echelle plante
+            if self.lsystem.Biomasse_aerienne[id_plante]>0 and self.lsystem.t1[id_plante]*math.exp(self.lsystem.TPS*self.lsystem.t2[id_plante])-self.lsystem.t1[id_plante]>0 and self.lsystem.surface_foliaire_emergee[id_plante] > 0 and self.lsystem.Demande_feuille[id_plante] != 0: #Verifie qu'il y a une partie aerienne et que TPS, t1 et t2 sont positifs          # surface_foliaire_emergee[ID] > 0 and Demande_feuille[ID] > 0 : ajout SIMON
+                # Calcul biomasse creee
+                if self.lsystem.option_morphogenetic_regulation_by_carbone == True:
+                    # Approche RUE
+                    BiomassCree = self.biomass_production[id_plante]
+                else:
+                    # Approche croissance biomasse exponentielle (cf th?se Vincent Migault)
+                    BiomassCree=self.lsystem.t2[id_plante]*(self.lsystem.Biomasse_aerienne[id_plante]+self.lsystem.t1[id_plante])*(1+self.lsystem.Beta[id_plante]*self.lsystem.Alpha[id_plante]*(self.lsystem.Biomasse_aerienne[id_plante])**(self.lsystem.Alpha[id_plante]-1))
+
+                # Allocation aerien/racinaire + ratio offre/demande
+                if BiomassCree>0 and 0.99*BiomassCree > self.lsystem.Demande_feuille[id_plante]:  # demande satisfaite
+                    RootBiomassCree = BiomassCree - self.lsystem.Demande_feuille[id_plante]  # Allocation surplus non utilise par parties aeriennes aux racines
+                    Biomasse_racinaire[id_plante] += RootBiomassCree
+                    PourcentageFeuilGrowthRealized[id_plante] = 1  # Pas de limitation croissance foliaire pour prochain pas de temps
+                else:  # Demande non satisafite
+                    RootBiomassCree = 0.01*BiomassCree  # Racines ne prennent qu'1% de l'offre
+                    Biomasse_racinaire[id_plante] += RootBiomassCree
+                    BiomassFeuilCree = 0.99*BiomassCree
+                    PourcentageFeuilGrowthRealized[id_plante] = max(0, BiomassFeuilCree / self.lsystem.Demande_feuille[id_plante]) # Reduction croissance foliaire potentielle au prorata offre/demande pour prochain pas de temps
+            else:
+                RootBiomassCree=0
+                BiomassCree=0
+
+            
+            if self.lsystem.RootPotentialNewBiomass[id_plante]==0:
+                PourcentageRootGrowthRealized[id_plante]=0
+                
+            else:
+                PourcentageRootGrowthRealized[id_plante]=RootBiomassCree/self.lsystem.RootPotentialNewBiomass[id_plante]
+                if PourcentageRootGrowthRealized[id_plante]>1:
+                    PourcentageRootGrowthRealized[id_plante]=1
+                else:
+                    if self.lsystem.RootPotentialNewBiomass[id_plante]-RootBiomassCree < self.lsystem.Reserve[id_plante]:
+                        PourcentageRootGrowthRealized[id_plante]=1
+                
+                    else:
+                        PourcentageRootGrowthRealized[id_plante]=(RootBiomassCree+self.lsystem.Reserve[id_plante])/self.lsystem.RootPotentialNewBiomass[id_plante]
+
+        return Biomasse_racinaire, PourcentageFeuilGrowthRealized, PourcentageRootGrowthRealized
+
     def doy(self):
         """Current thermal day
 
