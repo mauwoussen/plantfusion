@@ -456,4 +456,4 @@ def lgrass_soil_domain(espacement=50, rows=1, columns=1):
     # s = [[-espacement / 2, -espacement / 2],
     #     [espacement * (rows - 1) + espacement / 2, espacement * (columns - 1) + espacement / 2]]
 
-    return ((0., 0.), (0.01 * espacement * (columns-1), 0.01 * espacement * (rows-1)))
+    return ((0., 0.), (0.01 * espacement * (columns), 0.01 * espacement * (rows)))

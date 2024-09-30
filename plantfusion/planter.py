@@ -830,6 +830,22 @@ class Planter:
         if scanning_ray > 0. and self.save_plant_positions:
             plants_index = list(zip(self.plants_information["plant"], self.plants_information["FSPM global index"]))
 
+            if type == "infinite" :
+                xd = abs(self.domain[1][0] - self.domain[0][0])
+                yd = abs(self.domain[1][1] - self.domain[0][1])
+                translation = [(0., 0.),
+                                (xd, 0.),
+                                (-xd, 0.),
+                                (0., yd),
+                                (0., -yd),
+                                (xd, yd),
+                                (-xd, yd),
+                                (-xd, -yd),
+                                (xd, -yd),
+                                ]
+            else:
+                translation = [(0., 0.)]
+
             for row in self.plants_information.itertuples():
                 current_plant_index = (row.plant, row._3)
                 p0 = row.position
@@ -845,16 +861,20 @@ class Planter:
                 plants_list_to_test = list(set(plants_index) - set(row._5) - set([current_plant_index]))
 
                 for i,n in enumerate(plants_list_to_test):
-                    p = self.plants_information[(self.plants_information.plant==n[0]) & (self.plants_information["FSPM global index"]==n[1])]["position"].values[0]
-                    d = math.sqrt(sum([(x-y)*(x-y) for x,y in zip(p0[:2], p[:2])]))
-                    # op += 1
-                    if d <= scanning_ray:
-                        self.plants_information.at[self.plants_information[(self.plants_information.plant==row.plant) & 
-                                                (self.plants_information["FSPM global index"]==row._3)].index[0], "nearest neighbours"].append(n)
-                        
-                        self.plants_information.at[self.plants_information[(self.plants_information.plant==n[0]) & 
-                                                (self.plants_information["FSPM global index"]==n[1])].index[0], "nearest neighbours"].append(current_plant_index)
-        
+
+
+                    for v in translation:
+                        p = self.plants_information[(self.plants_information.plant==n[0]) & (self.plants_information["FSPM global index"]==n[1])]["position"].values[0]
+                        d = math.sqrt(sum([(x-(y+z))*(x-(y+z)) for x,y,z in zip(p0[:2], p[:2],v)]))
+                        # op += 1
+                        if d <= scanning_ray:
+                            self.plants_information.at[self.plants_information[(self.plants_information.plant==row.plant) & 
+                                                    (self.plants_information["FSPM global index"]==row._3)].index[0], "nearest neighbours"].append(n)
+                            
+                            self.plants_information.at[self.plants_information[(self.plants_information.plant==n[0]) & 
+                                                    (self.plants_information["FSPM global index"]==n[1])].index[0], "nearest neighbours"].append(current_plant_index)
+                            break
+            
         else:
             print("error -- save_plant_positions = %b and scanning_ray = %f" % (self.save_plant_positions, scanning_ray))
 
