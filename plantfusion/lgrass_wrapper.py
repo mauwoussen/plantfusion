@@ -62,6 +62,7 @@ class Lgrass_wrapper:
         id_scenario=0,
         caribu_parameters_file="param_caribu",
         lai="plantfusion",
+        number_of_plants=None,
         activate_genetic_model=False,
         genetic_model_folder="modelgenet",
         generation_index=1,
@@ -150,13 +151,17 @@ class Lgrass_wrapper:
             out_param_file=os.path.join(out_folder, "data", self.simulation_name + ".csv"),
             id_gener=generation_index,
             opt_repro=opt_repro,
+            number_of_plants=number_of_plants,
         )
         
         # plant positions
         self.generation_type = planter.generation_type
         if planter.generation_type == "default":
             self.lsystem.posPlante = posPlante
-            self.lsystem.Espacement = float(posPlante[1][1] - posPlante[0][1])
+            if len(posPlante) > 1:
+                self.lsystem.Espacement = float(posPlante[1][1] - posPlante[0][1])
+            else:
+                self.lsystem.Espacement = 1.
         
         elif planter.generation_type == "random":
             self.lsystem.posPlante = planter.generate_random_lgrass(indice_instance=self.lgrass_index)
@@ -254,8 +259,6 @@ class Lgrass_wrapper:
         results = out[filter]
         
         
-        self.leaves_area = {}
-
         self.leaves_area = {}
 
         # biomass computation
@@ -408,12 +411,12 @@ class Lgrass_wrapper:
                 position_plantes_adjacentes = adj9Plantes(numTOpos(id_plante)) # liste des positions des plantes adjacentes
                 surface_9_plantes = 0
                 for p in position_plantes_adjacentes:
-                    if self.lsystem.posTOnum(p)>-1:
+                    if posTOnum(p)>-1:
                         surface_9_plantes += self.lsystem.surface_foliaire_emergee[posTOnum(p)]
                 return surface_9_plantes
             
             nb_plantes = 9
-            LAI_proximite = surfol9Plantes(id_plante) / (self.lsystem.Espacement**2 * nb_plantes)
+            LAI_proximite = surfol9Plantes(id_plante) / (50**2 * nb_plantes)
             return LAI_proximite
         
         local_LAI_by_plant = {}

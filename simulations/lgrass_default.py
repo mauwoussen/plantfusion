@@ -48,7 +48,6 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
         in_folder=in_folder,
         out_folder=out_folder,
         id_scenario=id_scenario,
-        lai="lgrass",
         activate_genetic_model=True,
         genetic_model_folder=genetic_model_folder,
         outputs_graphs=graphs,
