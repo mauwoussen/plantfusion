@@ -1,6 +1,7 @@
 import os
 import time
 import datetime
+import math
 
 from lgrass import param_reproduction_functions as prf
 
@@ -103,7 +104,7 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
         writegeo=write_geo,
     )
 
-    scanning_ray = 0.015
+    scanning_ray = 0.01 * math.sqrt(2)
     planter_9plants_plantfusion.scan_nearest_plants_neighours(scanning_ray)
     planter_9plants_default.scan_nearest_plants_neighours(scanning_ray)
     planter_1plant.scan_nearest_plants_neighours(scanning_ray)

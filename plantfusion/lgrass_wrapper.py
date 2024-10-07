@@ -373,7 +373,9 @@ class Lgrass_wrapper:
             else:
                 soil_surface = math.pi * planter.scanning_ray**2
 
-            local_LAI_by_plant[row.plant] = sum([self.leaves_area[i[0]] for i in row._5] + [self.leaves_area[row.plant]]) / soil_surface
+            # conversion from cm2 to m2
+            local_LAI_by_plant[row.plant] = sum([0.0001 * self.lsystem.surface_foliaire_emergee[i[0]] for i in row._5] + 
+                                                [0.0001*self.lsystem.surface_foliaire_emergee[row.plant]]) / soil_surface
         
         return local_LAI_by_plant
     
@@ -384,7 +386,7 @@ class Lgrass_wrapper:
                 for i in range((self.lsystem.NBlignes)*(self.lsystem.NBcolonnes)):
                     if (self.lsystem.posPlante[i] == pos):
                         id_plante = i
-                    return id_plante
+                return id_plante
             
             def numTOpos(id_plante): #Determination de la position de la plante a partir de l'id
                 return self.lsystem.posPlante[id_plante]
@@ -416,7 +418,7 @@ class Lgrass_wrapper:
                 return surface_9_plantes
             
             nb_plantes = 9
-            LAI_proximite = surfol9Plantes(id_plante) / (50**2 * nb_plantes)
+            LAI_proximite = surfol9Plantes(id_plante) / (self.lsystem.Espacement**2 * nb_plantes)
             return LAI_proximite
         
         local_LAI_by_plant = {}
