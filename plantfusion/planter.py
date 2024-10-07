@@ -413,7 +413,7 @@ class Planter:
             positions = []
             for i in range(self.number_of_plants[self.indexer.lgrass_index[indice_instance]]):
                 positions.append(
-                    [numpy.random.uniform(0.0, self.domain[1][0]), numpy.random.uniform(0.0, self.domain[1][0])]
+                    [numpy.random.uniform(0.0, 10*self.domain[1][0]), numpy.random.uniform(0.0, 10*self.domain[1][0])]
                 )
 
         self.lgrass_positions[indice_instance] = positions

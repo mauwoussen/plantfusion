@@ -1,6 +1,7 @@
 import os
 import time
 import datetime
+import math
 
 from lgrass import param_reproduction_functions as prf
 
@@ -41,15 +42,17 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
     index_log = Indexer(global_order=[plants_name], lgrass_names=[plants_name])
     
     plant_density = {plants_name : 400}
-    xy_square_length = 0.5 # m
-    planter = Planter(generation_type="random", indexer=index_log, plant_density=plant_density, xy_square_length=xy_square_length)
+    xy_square_length = 0.4 # m
+    planter = Planter(generation_type="random", indexer=index_log, plant_density=plant_density, xy_square_length=xy_square_length, save_plant_positions=True)
 
     lgrass = Lgrass_wrapper(
         name=plants_name,
         indexer=index_log,
+        planter=planter,
         in_folder=in_folder,
         out_folder=out_folder,
         id_scenario=id_scenario,
+        number_of_plants=plant_density[plants_name] * xy_square_length**2,
         activate_genetic_model=True,
         genetic_model_folder=genetic_model_folder,
         outputs_graphs=graphs,
@@ -72,14 +75,18 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
         lgrass = Lgrass_wrapper(
             name=plants_name,
             indexer=index_log,
+            planter=planter,
             in_folder=in_folder,
             out_folder=out_folder,
             id_scenario=id_scenario,
+            number_of_plants=plant_density[plants_name] * xy_square_length**2,
             activate_genetic_model=True,
             genetic_model_folder=genetic_model_folder,
-            generation_index=i,
             outputs_graphs=graphs,
         )
+
+        scanning_ray = 0.01 * math.sqrt(2)
+        planter.scan_nearest_plants_neighours(scanning_ray)
 
         # daily loop
         for t in range(0, lgrass.lsystem.derivationLength):
@@ -87,14 +94,14 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
             lgrass.derive(t)
 
             # execute CARIBU on each new thermal day
-            if thermal_day < lgrass.lsystem.current_day :
+            if thermal_day < lgrass.lsystem.current_day or t == 0:
                 if lgrass.setup["option_morphogenetic_regulation_by_carbone"]:
                     scene_lgrass = lgrass.light_inputs()
                     lighting.run(energy=lgrass.energy(), scenes=[scene_lgrass])
                     lgrass.light_results(lighting=lighting)
 
-            # empty
-            # lgrass.run()
+            # compute local LAI
+            lgrass.run(planter)
 
         lgrass.end()
 

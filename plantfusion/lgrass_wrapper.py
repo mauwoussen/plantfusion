@@ -167,13 +167,21 @@ class Lgrass_wrapper:
             self.lsystem.posPlante = planter.generate_random_lgrass(indice_instance=self.lgrass_index)
 
         if planter.save_plant_positions:
-            for i, p in enumerate(posPlante):
-                planter.plants_information.loc[len(planter.plants_information)] = [i, 
-                                                                                    self.name, 
-                                                                                    self.global_index, 
-                                                                                    [float(p[0])*0.01, float(p[1])*0.01, 0.], 
-                                                                                    []]
+            for i, p in enumerate(self.lsystem.posPlante):
+                if planter.generation_type == "default":
+                    planter.plants_information.loc[len(planter.plants_information)] = [i, 
+                                                                                        self.name, 
+                                                                                        self.global_index, 
+                                                                                        [float(p[0])*0.01, float(p[1])*0.01, 0.], 
+                                                                                        []]
+                else:
+                    filter = (planter.plants_information["plant"]==i) & \
+                                (planter.plants_information["FSPM global index"]==self.global_index)
+                    planter.plants_information.at[planter.plants_information[filter].index[0], "position"] = [float(p[0])*0.01, float(p[1])*0.01, 0.]
 
+        # regenerate axiom
+        # self.lsystem.axiom = self.lsystem.gener_lstring()
+        
         # options and more parameters
         self.lsystem.option_tallage = self.setup["option_tallage"]
         self.lsystem.option_senescence = self.setup["option_senescence"]
@@ -474,7 +482,7 @@ class Lgrass_wrapper:
                         PourcentageRootGrowthRealized[id_plante]=(RootBiomassCree+self.lsystem.Reserve[id_plante])/self.lsystem.RootPotentialNewBiomass[id_plante]
 
         return Biomasse_racinaire, PourcentageFeuilGrowthRealized, PourcentageRootGrowthRealized
-
+    
     def doy(self):
         """Current thermal day
 
