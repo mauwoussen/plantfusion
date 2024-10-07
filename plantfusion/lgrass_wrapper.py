@@ -3,6 +3,7 @@ import shutil
 import pandas
 import numpy
 import math
+import itertools
 
 import openalea.lpy as lpy
 
@@ -60,6 +61,7 @@ class Lgrass_wrapper:
         configuration_file="plan_simulation.csv",
         id_scenario=0,
         caribu_parameters_file="param_caribu",
+        lai="plantfusion",
         activate_genetic_model=False,
         genetic_model_folder="modelgenet",
         generation_index=1,
@@ -86,6 +88,7 @@ class Lgrass_wrapper:
         self.indexer = indexer
         self.global_index = indexer.global_order.index(name)
         self.lgrass_index = indexer.lgrass_names.index(name)
+        self.lai = lai
 
         # plan de simulation
         self.setup_list = pandas.read_csv(os.path.join(in_folder, configuration_file), sep=",")
@@ -302,7 +305,10 @@ class Lgrass_wrapper:
     def run(self, planter):
         
         # Calcul LAI proximite
-        rapportS9_SSol_dict = self._proximity_LAI(planter)
+        if self.lai == "plantfusion":
+            rapportS9_SSol_dict = self._proximity_LAI(planter)
+        elif self.lai == "lgrass":
+            rapportS9_SSol_dict = self._lgrass_default_lai(planter)
         
         # dependance avec biomprod (couplage lumière)
         Biomasse_racinaire, PourcentageFeuilGrowthRealized, PourcentageRootGrowthRealized = self._potential_plant_growth()
@@ -366,6 +372,55 @@ class Lgrass_wrapper:
 
             local_LAI_by_plant[row.plant] = sum([self.leaves_area[i[0]] for i in row._5] + [self.leaves_area[row.plant]]) / soil_surface
         
+        return local_LAI_by_plant
+    
+    def _lgrass_default_lai(self, planter): 
+        def LAI_proximite(id_plante):
+            def posTOnum(pos): #Determination de l'id de la plante a partir de la position
+                id_plante = -1
+                for i in range((self.lsystem.NBlignes)*(self.lsystem.NBcolonnes)):
+                    if (self.lsystem.posPlante[i] == pos):
+                        id_plante = i
+                    return id_plante
+            
+            def numTOpos(id_plante): #Determination de la position de la plante a partir de l'id
+                return self.lsystem.posPlante[id_plante]
+            
+            def deplacPos(pos, depl): #Selectionne la plante adjacente donnee
+                ret=list(pos)  #Cree une copie de pos
+                if ((depl[0]==-1 or depl[0]==0 or depl[0]==1) and (depl[1]==-1 or depl[1]==0 or depl[1]==1)): #Valeurs entre -1 et 1 : plantes adjacentes et non a 2 espacements
+                    ret[0]=pos[0] + depl[0]
+                    ret[1]=pos[1] + depl[1]
+                    #Simulation d'un couvert de taille infini:
+                    if (ret[0] == -1): ret[0] = self.lsystem.NBlignes-1
+                    if (ret[0] == self.lsystem.NBlignes): ret[0] = 0
+                    if (ret[1] == -1): ret[1] = self.lsystem.NBcolonnes-1
+                    if (ret[1] == self.lsystem.NBcolonnes): ret[1] = 0
+                return ret
+            
+            def adj9Plantes(pos): #Fait la liste des plantes adjacentes + plante cible
+                position_plantes_adjacentes = []
+                for p in itertools.product([-1,0,1], [-1,0,1]):
+                    position_plantes_adjacentes.append(deplacPos(pos, p))
+                return position_plantes_adjacentes
+            
+            def surfol9Plantes(id_plante): #Calcule la surface foliaires des 9 plantes adjacentes
+                position_plantes_adjacentes = adj9Plantes(numTOpos(id_plante)) # liste des positions des plantes adjacentes
+                surface_9_plantes = 0
+                for p in position_plantes_adjacentes:
+                    if self.lsystem.posTOnum(p)>-1:
+                        surface_9_plantes += self.lsystem.surface_foliaire_emergee[posTOnum(p)]
+                return surface_9_plantes
+            
+            nb_plantes = 9
+            LAI_proximite = surfol9Plantes(id_plante) / (self.lsystem.Espacement**2 * nb_plantes)
+            return LAI_proximite
+        
+        local_LAI_by_plant = {}
+
+        for row in planter.plants_information.itertuples():
+            local_LAI_by_plant[row.plant] = LAI_proximite(row.plant)
+
         return local_LAI_by_plant
         
     def _potential_plant_growth(self):
