@@ -360,21 +360,23 @@ class Lgrass_wrapper:
         local_LAI_by_plant = {}
 
         for row in planter.plants_information.itertuples():
+            
+            # if it is a current lgrass plant
+            if row._3 == self.global_index :
+                if self.generation_type == "default":
+                    soil_surface = (len(row._5)+1) * (planter.scanning_ray/math.sqrt(2))**2
+                else:
+                    soil_surface = math.pi * planter.scanning_ray**2
 
-            if self.generation_type == "default":
-                soil_surface = (len(row._5)+1) * (planter.scanning_ray/math.sqrt(2))**2
-            else:
-                soil_surface = math.pi * planter.scanning_ray**2
+                plants_area = 0.0001*self.lsystem.surface_foliaire_emergee[row.plant]
+                for id in row._5:
+                    if id[1] == self.global_index:
+                        plants_area += 0.0001 * self.lsystem.surface_foliaire_emergee[id[0]]
+                    elif legumewrapper is not None:
+                        plants_area += legumewrapper.lsystem.tag_loop_inputs[14]["surf"][id[0]]
 
-            plants_area = 0.0001*self.lsystem.surface_foliaire_emergee[row.plant]
-            for id in row._5:
-                if id[1] == self.global_index:
-                    plants_area += 0.0001 * self.lsystem.surface_foliaire_emergee[id[0]]
-                elif legumewrapper is not None:
-                    plants_area += legumewrapper.lsystem.tag_loop_inputs[14]["surf"][id[0]]
-
-            # conversion from cm2 to m2
-            local_LAI_by_plant[row.plant] = plants_area / soil_surface
+                # conversion from cm2 to m2
+                local_LAI_by_plant[row.plant] = plants_area / soil_surface
         
         return local_LAI_by_plant
     
