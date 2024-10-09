@@ -66,6 +66,7 @@ class Planter:
         indexer=Indexer(),
         legume_cote={},
         legume_number_of_plants={},
+        lgrass_number_of_plants={},
         inter_rows=0.15,
         plant_density={1: 250},
         xy_plane=None,
@@ -94,11 +95,13 @@ class Planter:
         for i in self.indexer.legume_index:
             self.transformations["scenes unit"][i] = "cm"
         for i in self.indexer.lgrass_index:
-            self.transformations["scenes unit"][i] = "mm"
+            self.transformations["scenes unit"][i] = "cm"
             
         if generation_type == "default":
             self.__default_preconfigured(legume_cote, inter_rows, plant_density, xy_plane, translate, seed)
             for name, nb_plt in legume_number_of_plants.items():
+                self.number_of_plants[indexer.global_order.index(name)] = nb_plt
+            for name, nb_plt in lgrass_number_of_plants.items():
                 self.number_of_plants[indexer.global_order.index(name)] = nb_plt
 
         elif generation_type == "random":
@@ -405,7 +408,7 @@ class Planter:
         random.seed(s)
         numpy.random.seed(s)
 
-        # tirage des positions 
+        # tirage des positions en cm
         # list de 2-list des positions [x, y]
         if self.lgrass_positions[indice_instance] != [] :
             positions = self.lgrass_positions[indice_instance]
@@ -413,7 +416,7 @@ class Planter:
             positions = []
             for i in range(self.number_of_plants[self.indexer.lgrass_index[indice_instance]]):
                 positions.append(
-                    [numpy.random.uniform(0.0, 10*self.domain[1][0]), numpy.random.uniform(0.0, 10*self.domain[1][0])]
+                    [numpy.random.uniform(0.0, 100*self.domain[1][0]), numpy.random.uniform(0.0, 100*self.domain[1][1])]
                 )
 
         self.lgrass_positions[indice_instance] = positions
@@ -824,6 +827,7 @@ class Planter:
     
 
     def scan_nearest_plants_neighours(self, scanning_ray=0., type="infinite"):
+        print("--- scanning neighbouring plants")
         self.scanning_ray = scanning_ray
 
         if scanning_ray > 0. and self.save_plant_positions:
@@ -883,5 +887,7 @@ class Planter:
                     
         else:
             print("error -- save_plant_positions = %b and scanning_ray = %f" % (self.save_plant_positions, scanning_ray))
+
+        print("--- done")
 
 

@@ -1,7 +1,6 @@
 import os
 import time
 import datetime
-import math
 
 from lgrass import param_reproduction_functions as prf
 
@@ -40,7 +39,7 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
 
     plants_name = "lgrass"
     index_log = Indexer(global_order=[plants_name], lgrass_names=[plants_name])
-    planter = Planter(generation_type="default", indexer=index_log, xy_plane=lgrass_soil_domain(espacement=1., rows=8, columns=8), save_plant_positions=True)
+    planter = Planter(generation_type="default", indexer=index_log, lgrass_number_of_plants={plants_name: 64}, xy_plane=lgrass_soil_domain(espacement=1., rows=8, columns=8), save_plant_positions=True)
 
     lgrass = Lgrass_wrapper(
         name=plants_name,
@@ -63,7 +62,7 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
         writegeo=write_geo,
     )
 
-    scanning_ray = 0.01 * math.sqrt(2)
+    scanning_ray = 0.0142
     planter.scan_nearest_plants_neighours(scanning_ray)
 
     current_time_of_the_system = time.time()

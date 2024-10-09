@@ -1,7 +1,6 @@
 import os
 import time
 import datetime
-import math
 
 from lgrass import param_reproduction_functions as prf
 
@@ -85,7 +84,7 @@ def simulation(in_folder, genetic_model_folder, out_folder, id_scenario=0, write
             outputs_graphs=graphs,
         )
 
-        scanning_ray = 0.01 * math.sqrt(2)
+        scanning_ray = 0.0142
         planter.scan_nearest_plants_neighours(scanning_ray)
 
         # daily loop

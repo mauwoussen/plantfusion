@@ -24,7 +24,7 @@ class Lgrass_wrapper:
 
     Note
     ---- 
-    Only one lsystem per wrapper instance
+    Only one lsystem per wrapper instance. lgrass model is in cm
 
     Parameters
     ----------
@@ -157,30 +157,20 @@ class Lgrass_wrapper:
         # plant positions
         self.generation_type = planter.generation_type
         if planter.generation_type == "default":
-            self.lsystem.posPlante = posPlante
+            self.lsystem.posPlante = posPlante # cm
             if len(posPlante) > 1:
                 self.lsystem.Espacement = float(posPlante[1][1] - posPlante[0][1])
             else:
                 self.lsystem.Espacement = 1.
         
         elif planter.generation_type == "random":
-            self.lsystem.posPlante = planter.generate_random_lgrass(indice_instance=self.lgrass_index)
+            self.lsystem.posPlante = planter.generate_random_lgrass(indice_instance=self.lgrass_index) # cm
 
         if planter.save_plant_positions:
             for i, p in enumerate(self.lsystem.posPlante):
-                if planter.generation_type == "default":
-                    planter.plants_information.loc[len(planter.plants_information)] = [i, 
-                                                                                        self.name, 
-                                                                                        self.global_index, 
-                                                                                        [float(p[0])*0.01, float(p[1])*0.01, 0.], 
-                                                                                        []]
-                else:
-                    filter = (planter.plants_information["plant"]==i) & \
+                filter = (planter.plants_information["plant"]==i) & \
                                 (planter.plants_information["FSPM global index"]==self.global_index)
-                    planter.plants_information.at[planter.plants_information[filter].index[0], "position"] = [float(p[0])*0.01, float(p[1])*0.01, 0.]
-
-        # regenerate axiom
-        # self.lsystem.axiom = self.lsystem.gener_lstring()
+                planter.plants_information.at[planter.plants_information[filter].index[0], "position"] = [float(p[0])*0.01, float(p[1])*0.01, 0.] # cm to m
         
         # options and more parameters
         self.lsystem.option_tallage = self.setup["option_tallage"]
@@ -266,9 +256,6 @@ class Lgrass_wrapper:
             filter = out.VegetationType == self.global_index
         results = out[filter]
         
-        
-        self.leaves_area = {}
-
         # biomass computation
         self.biomass_production = [0.] * self.lsystem.nb_plantes
         self.leaves_area = [0.] * self.lsystem.nb_plantes
@@ -281,8 +268,6 @@ class Lgrass_wrapper:
                 # radiation integered with organ surface
                 energy_per_plant = (df_plant["par Ei"] * df_plant["Area"]).sum()
                 self.biomass_production[plant_id] = energy_per_plant * self.lighting_parameters["RUE"] # Ray: MJ PAR ; RUE : g MJ-1
-
-                self.leaves_area[plant_id] = df_plant["Area"].sum()
 
         # # tiller regression option (not returned yet)
         # if self.lsystem.option_tiller_regression:
@@ -313,11 +298,11 @@ class Lgrass_wrapper:
         #                     tiller_to_remove = pd.concat([tiller_to_remove, pd.DataFrame([
         #                         {'id_plante': [id_plante], 'id_talle': [potential_tiller_to_remove.id_talle.item()]}])], ignore_index=True)
 
-    def run(self, planter):
+    def run(self, planter, legumewrapper=None):
         
         # Calcul LAI proximite
         if self.lai == "plantfusion":
-            rapportS9_SSol_dict = self._proximity_LAI(planter)
+            rapportS9_SSol_dict = self._proximity_LAI(planter, legumewrapper)
         elif self.lai == "lgrass":
             rapportS9_SSol_dict = self._lgrass_default_lai(planter)
         
@@ -371,7 +356,7 @@ class Lgrass_wrapper:
         self.lsystem.clear()
         print("".join((self.simulation_name, " - done")))
 
-    def _proximity_LAI(self, planter):
+    def _proximity_LAI(self, planter, legumewrapper=None):
         local_LAI_by_plant = {}
 
         for row in planter.plants_information.itertuples():
@@ -381,9 +366,15 @@ class Lgrass_wrapper:
             else:
                 soil_surface = math.pi * planter.scanning_ray**2
 
+            plants_area = 0.0001*self.lsystem.surface_foliaire_emergee[row.plant]
+            for id in row._5:
+                if id[1] == self.global_index:
+                    plants_area += 0.0001 * self.lsystem.surface_foliaire_emergee[id[0]]
+                elif legumewrapper is not None:
+                    plants_area += legumewrapper.lsystem.tag_loop_inputs[14]["surf"][id[0]]
+
             # conversion from cm2 to m2
-            local_LAI_by_plant[row.plant] = sum([0.0001 * self.lsystem.surface_foliaire_emergee[i[0]] for i in row._5] + 
-                                                [0.0001*self.lsystem.surface_foliaire_emergee[row.plant]]) / soil_surface
+            local_LAI_by_plant[row.plant] = plants_area / soil_surface
         
         return local_LAI_by_plant
     
@@ -510,7 +501,7 @@ def lgrass_soil_domain(espacement=50, rows=1, columns=1):
     Parameters
     ----------
     espacement : int, optional
-        length of one side in cm, by default 50
+        space between two plants in cm, by default 50
     rows : int, optional
         number of plant rows, by default 1
     columns : int, optional
