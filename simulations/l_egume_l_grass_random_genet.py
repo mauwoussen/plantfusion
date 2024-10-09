@@ -25,7 +25,9 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
     legume_name = "legume"
     lgrass_name = "lgrass"
     index_log = Indexer(global_order=[legume_name, lgrass_name], legume_names=[legume_name], lgrass_names=[lgrass_name])
-    planter = Planter(indexer=index_log, legume_cote={legume_name : 40.}, legume_number_of_plants={legume_name : 32},  lgrass_number_of_plants={lgrass_name: 64}, save_plant_positions=True)
+
+    plant_density = {legume_name : 250, lgrass_name : 250}
+    planter = Planter(generation_type="random", indexer=index_log, plant_density=plant_density, save_plant_positions=True)
 
     # l-egume
     legume = L_egume_wrapper(
@@ -40,8 +42,9 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
         in_folder=in_folder_lgrass,
         out_folder=out_folder,
         id_scenario=scenario_lgrass,
-        activate_genetic_model=False,
-        genetic_model_folder=os.path.join(in_folder_lgrass, "modelgenet"),
+        number_of_plants=planter.number_of_plants[1],
+        activate_genetic_model=True,
+        genetic_model_folder= os.path.join(os.getcwd(), in_folder_lgrass, "modelgenet"),
         outputs_graphs=lgrass_graph,
     )
 
@@ -62,9 +65,30 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
     scanning_ray = 0.0142
     planter.scan_nearest_plants_neighours(scanning_ray)
     
+    # genetic init
+    prf.rungenet(lgrass.genet_src, lgrass.genet_dst, lgrass.genet_exe, None, 0)
+    genet_generation_date = [0, 200, 400]
+    gener_num = 0
+    
     try:
         current_time_of_the_system = time.time()
         for t in range(legume.lsystem.derivationLength):
+
+            if t > genet_generation_date[gener_num]:
+                lgrass = Lgrass_wrapper(
+                    name=lgrass_name,
+                    indexer=index_log,
+                    planter=planter,
+                    in_folder=in_folder_lgrass,
+                    out_folder=out_folder,
+                    id_scenario=scenario_lgrass,
+                    number_of_plants=planter.number_of_plants[1],
+                    activate_genetic_model=True,
+                    genetic_model_folder= os.path.join(os.getcwd(), in_folder_lgrass, "modelgenet"),
+                    outputs_graphs=lgrass_graph,
+                )
+                gener_num += 1
+
             legume.derive(t)
 
             thermal_day = lgrass.lsystem.current_day
@@ -99,18 +123,25 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
             legume.run()
             lgrass.run(planter, legume)
 
+            if t > genet_generation_date[gener_num] - 1:
+                lgrass.end()
+                if lgrass.setup["option_reproduction"] != "False":
+                    prf.rungenet(lgrass.genet_src, lgrass.genet_dst, lgrass.genet_exe, lgrass.genet_mat, 1)
+
         execution_time = int(time.time() - current_time_of_the_system)
         print("\n" "Simulation run in {}".format(str(datetime.timedelta(seconds=execution_time))))
 
     finally:
         legume.end()
         lgrass.end()
+        if lgrass.setup["option_reproduction"] != "False":
+            prf.rungenet(lgrass.genet_src, lgrass.genet_dst, lgrass.genet_exe, lgrass.genet_mat, 1)
 
 
 if __name__ == "__main__":
     in_folder_legume = "inputs_soil_legume"
     in_folder_lgrass = "inputs_lgrass"
-    out_folder = "outputs/lgrass_legume_default"
+    out_folder = "outputs/lgrass_legume_random_genet"
     scenario_legume = 1122
     scenario_lgrass = 5
     write_geo = True

@@ -63,8 +63,7 @@ def simulation(in_folder_legume, in_folder_lgrass, out_folder, scenario_legume, 
     soil = Soil_wrapper(out_folder=out_folder, legume_wrapper=legume,  legume_pattern=True, planter=planter)
 
     scanning_ray = 0.0142
-    planter.scanning_ray = scanning_ray
-    # planter.scan_nearest_plants_neighours(scanning_ray)
+    planter.scan_nearest_plants_neighours(scanning_ray)
     
     try:
         current_time_of_the_system = time.time()
